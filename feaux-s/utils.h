@@ -54,8 +54,11 @@ struct OSState {
 };
 
 struct OSStateCompat {
+	uint numProcesses;
 	ProcessCompat* processList;
+	uint numInterrupts;
 	IOInterrupt* interrupts;
+	uint numReady;
 	ProcessCompat* readyList;
 	StepAction* stepAction;
 	uint time;

@@ -12,5 +12,9 @@ export class Memory {
 	public getUint32(offset: number): number {
 		return this.dv.getUint32(offset, true);
 	}
+
+	public getInt32(offset: number): number {
+		return this.dv.getInt32(offset, true);
+	}
 }
 

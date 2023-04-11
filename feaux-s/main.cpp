@@ -233,56 +233,85 @@ OSStateCompat* exported getOSState() {
 	if (exportState->stepAction != nullptr) delete[] exportState->stepAction;
 
 	uint i = 0;
-	exportState->processList = new ProcessCompat[state->processList.size()];
-	for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
-		Process& proc = **it;
+	exportState->numProcesses = state->processList.size();
+	if (exportState->numProcesses > 0) {
+		exportState->processList = new ProcessCompat[exportState->numProcesses];
+		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
+			Process& proc = **it;
+			ProcessCompat& copy = exportState->processList[i];
 
-		exportState->processList[i].id = proc.id;
-		exportState->processList[i].name = proc.name.c_str();
-		exportState->processList[i].arrivalTime = proc.arrivalTime;
-		exportState->processList[i].doneTime = proc.doneTime;
-		exportState->processList[i].reqProcessorTime = proc.reqProcessorTime;
-		exportState->processList[i].processorTime = proc.processorTime;
-		exportState->processList[i].state = proc.state;
+			copy.id = proc.id;
+			copy.name = proc.name.c_str();
+			copy.arrivalTime = proc.arrivalTime;
+			copy.doneTime = proc.doneTime;
+			copy.reqProcessorTime = proc.reqProcessorTime;
+			copy.processorTime = proc.processorTime;
+			copy.state = proc.state;
 
-		exportState->processList[i].ioEvents = new IOEvent[proc.ioEvents.size()];
+			copy.numIOEvents = proc.ioEvents.size();
 
-		uint j = 0;
-		for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
-			exportState->processList[i].ioEvents[j++] = *ioEvtIt;
+			if (copy.numIOEvents > 0) {
+				copy.ioEvents = new IOEvent[copy.numIOEvents];
+
+				uint j = 0;
+				for (auto it = proc.ioEvents.begin(); it != proc.ioEvents.end(); it++) {
+					copy.ioEvents[j++] = *it;
+				}
+			} else {
+				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
 		}
-	}
-	prevProcListSize = state->processList.size();
-
-	i = 0;
-	exportState->interrupts = new IOInterrupt[state->interrupts.size()];
-	for (auto it = state->interrupts.begin(); it != state->interrupts.end(); it++, i++) {
-		exportState->interrupts[i] = *it;
+		prevProcListSize = state->processList.size();
+	} else {
+		prevProcListSize = exportState->numProcesses;
+		exportState->processList = nullptr;	 // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 	}
 
-	i = 0;
-	exportState->readyList = new ProcessCompat[state->readyList.size()];
-	for (; i < state->readyList.size(); i++) {
-		Process* ptr = state->readyList.front();
-		Process& proc = *ptr;
-
-		exportState->processList[i].id = proc.id;
-		exportState->processList[i].name = proc.name.c_str();
-		exportState->processList[i].arrivalTime = proc.arrivalTime;
-		exportState->processList[i].doneTime = proc.doneTime;
-		exportState->processList[i].reqProcessorTime = proc.reqProcessorTime;
-		exportState->processList[i].processorTime = proc.processorTime;
-		exportState->processList[i].state = proc.state;
-
-		exportState->processList[i].ioEvents = new IOEvent[proc.ioEvents.size()];
-
-		uint j = 0;
-		for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
-			exportState->processList[i].ioEvents[j++] = *ioEvtIt;
+	exportState->numInterrupts = state->interrupts.size();
+	if (exportState->numInterrupts > 0) {
+		i = 0;
+		exportState->interrupts = new IOInterrupt[exportState->numInterrupts];
+		for (auto it = state->interrupts.begin(); it != state->interrupts.end(); it++, i++) {
+			exportState->interrupts[i] = *it;
 		}
+	} else {
+		exportState->interrupts = nullptr;	// should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+	}
 
-		state->readyList.pop();
-		state->readyList.emplace(ptr);
+	exportState->numReady = state->readyList.size();
+	if (exportState->numReady > 0) {
+		i = 0;
+		exportState->readyList = new ProcessCompat[exportState->numReady];
+		for (; i < exportState->numReady; i++) {
+			Process* ptr = state->readyList.front();
+			Process& proc = *ptr;
+			ProcessCompat& copy = exportState->processList[i];
+
+			copy.id = proc.id;
+			copy.name = proc.name.c_str();
+			copy.arrivalTime = proc.arrivalTime;
+			copy.doneTime = proc.doneTime;
+			copy.reqProcessorTime = proc.reqProcessorTime;
+			copy.processorTime = proc.processorTime;
+			copy.state = proc.state;
+
+			copy.numIOEvents = proc.ioEvents.size();
+			if (copy.numIOEvents > 0) {
+				copy.ioEvents = new IOEvent[copy.numIOEvents];
+
+				uint j = 0;
+				for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
+					copy.ioEvents[j++] = *ioEvtIt;
+				}
+			} else {
+				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+
+			state->readyList.pop();
+			state->readyList.emplace(ptr);
+		}
+	} else {
+		exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 	}
 
 	i = 0;

@@ -52,10 +52,10 @@ MachineStateCompat* exported getMachineState() {
 
 			uint j = 0;
 			for (auto it = proc.ioEvents.begin(); it != proc.ioEvents.end(); it++) {
-				exportMachineState->runningProcess[i].ioEvents[j++] = *it;
+				copy.ioEvents[j++] = *it;
 			}
 		} else {
-			copy.ioEvents = nullptr;
+			copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 		}
 	}
 

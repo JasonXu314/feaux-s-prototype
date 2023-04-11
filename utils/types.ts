@@ -50,6 +50,17 @@ export type Process = {
 	ioEvents: IOEvent[];
 };
 
+export type RawProcess = {
+	id: number;
+	name: Ptr<string>;
+	arrivalTime: number;
+	doneTime: number;
+	reqProcessorTime: number;
+	processorTime: number;
+	state: ProcessState;
+	ioEvents: Ptr<IOEvent>;
+};
+
 export type MachineState = {
 	numCores: number;
 	clockDelay: number;
