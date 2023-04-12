@@ -3,6 +3,29 @@
 MachineState* machineState = nullptr;
 MachineStateCompat* exportMachineState = nullptr;
 
+void exportProcess(const Process& src, ProcessCompat& dest) {
+	dest.id = src.id;
+	dest.name = src.name.c_str();
+	dest.arrivalTime = src.arrivalTime;
+	dest.doneTime = src.doneTime;
+	dest.reqProcessorTime = src.reqProcessorTime;
+	dest.processorTime = src.processorTime;
+	dest.state = src.state;
+
+	dest.numIOEvents = src.ioEvents.size();
+
+	if (dest.numIOEvents > 0) {
+		dest.ioEvents = new IOEvent[dest.numIOEvents];
+
+		uint j = 0;
+		for (auto it = src.ioEvents.begin(); it != src.ioEvents.end(); it++) {
+			dest.ioEvents[j++] = *it;
+		}
+	} else {
+		dest.ioEvents = nullptr;  // should be ignored on the other end if there are 0 IO Events, but set it to nullptr anyway for insurance
+	}
+}
+
 char* exported allocString(unsigned int size) {
 	char* str = new char[size + 1];
 
@@ -34,29 +57,7 @@ MachineStateCompat* exported getMachineState() {
 
 	exportMachineState->runningProcess = new ProcessCompat[machineState->numCores];
 	for (uint i = 0; i < machineState->numCores; i++) {
-		Process& proc = *machineState->runningProcess[i];
-		ProcessCompat& copy = exportMachineState->runningProcess[i];
-
-		copy.id = proc.id;
-		copy.name = proc.name.c_str();
-		copy.arrivalTime = proc.arrivalTime;
-		copy.doneTime = proc.doneTime;
-		copy.reqProcessorTime = proc.reqProcessorTime;
-		copy.processorTime = proc.processorTime;
-		copy.state = proc.state;
-
-		copy.numIOEvents = proc.ioEvents.size();
-
-		if (copy.numIOEvents > 0) {
-			copy.ioEvents = new IOEvent[copy.numIOEvents];
-
-			uint j = 0;
-			for (auto it = proc.ioEvents.begin(); it != proc.ioEvents.end(); it++) {
-				copy.ioEvents[j++] = *it;
-			}
-		} else {
-			copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
-		}
+		exportProcess(*machineState->runningProcess[i], exportMachineState->runningProcess[i]);
 	}
 
 	prevNumCores = machineState->numCores;

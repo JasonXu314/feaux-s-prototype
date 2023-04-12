@@ -22,6 +22,7 @@ export interface WASMModule {
 		getOSState(): Ptr<RawOSState>;
 		pause(): void;
 		unpause(): void;
+		setClockDelay(delay: number): void;
 	};
 }
 
@@ -74,6 +75,10 @@ export class WASMEngine {
 
 	public unpause(): void {
 		this.module.asm.unpause();
+	}
+
+	public setClockDelay(delay: number): void {
+		this.module.asm.setClockDelay(delay);
 	}
 
 	private readString(ptr: Ptr<string>): string {

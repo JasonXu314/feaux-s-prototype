@@ -70,6 +70,8 @@ struct OSStateCompat {
 
 extern MachineState* machineState;
 
+void exportProcess(const Process& src, ProcessCompat& dest);
+
 extern "C" {
 char* exported allocString(unsigned int size);
 void exported freeString(char* str);

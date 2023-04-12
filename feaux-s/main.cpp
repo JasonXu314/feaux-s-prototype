@@ -15,6 +15,7 @@ extern "C" {
 uint exported addProcess(Instruction* instructionList, uint size, char* processName);
 void exported pause();
 void exported unpause();
+void exported setClockDelay(uint delay);
 
 OSStateCompat* exported getOSState();
 }
@@ -29,7 +30,7 @@ void initOS();
 int main() {
 	cout << sizeof(ProcessCompat) << endl;
 
-	machineState = new MachineState{4, 250, new bool[4]{true, true, true, true}, new Process*[4]};
+	machineState = new MachineState{4, 500, new bool[4]{true, true, true, true}, new Process*[4]};
 
 	initOS();
 
@@ -223,6 +224,7 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 
 void exported pause() { state->paused = true; }
 void exported unpause() { state->paused = false; }
+void exported setClockDelay(uint delay) { machineState->clockDelay = delay; }
 
 OSStateCompat* exported getOSState() {
 	static uint prevProcListSize = 0, prevReadyListSize = 0, prevReentryListSize = 0;
@@ -260,29 +262,7 @@ OSStateCompat* exported getOSState() {
 	if (exportState->numProcesses > 0) {
 		exportState->processList = new ProcessCompat[exportState->numProcesses];
 		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
-			Process& proc = **it;
-			ProcessCompat& copy = exportState->processList[i];
-
-			copy.id = proc.id;
-			copy.name = proc.name.c_str();
-			copy.arrivalTime = proc.arrivalTime;
-			copy.doneTime = proc.doneTime;
-			copy.reqProcessorTime = proc.reqProcessorTime;
-			copy.processorTime = proc.processorTime;
-			copy.state = proc.state;
-
-			copy.numIOEvents = proc.ioEvents.size();
-
-			if (copy.numIOEvents > 0) {
-				copy.ioEvents = new IOEvent[copy.numIOEvents];
-
-				uint j = 0;
-				for (auto it = proc.ioEvents.begin(); it != proc.ioEvents.end(); it++) {
-					copy.ioEvents[j++] = *it;
-				}
-			} else {
-				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
-			}
+			exportProcess(**it, exportState->processList[i]);
 		}
 
 		prevProcListSize = exportState->numProcesses;
@@ -308,28 +288,8 @@ OSStateCompat* exported getOSState() {
 		exportState->readyList = new ProcessCompat[exportState->numReady];
 		for (; i < exportState->numReady; i++) {
 			Process* ptr = state->readyList.front();
-			Process& proc = *ptr;
-			ProcessCompat& copy = exportState->processList[i];
 
-			copy.id = proc.id;
-			copy.name = proc.name.c_str();
-			copy.arrivalTime = proc.arrivalTime;
-			copy.doneTime = proc.doneTime;
-			copy.reqProcessorTime = proc.reqProcessorTime;
-			copy.processorTime = proc.processorTime;
-			copy.state = proc.state;
-
-			copy.numIOEvents = proc.ioEvents.size();
-			if (copy.numIOEvents > 0) {
-				copy.ioEvents = new IOEvent[copy.numIOEvents];
-
-				uint j = 0;
-				for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
-					copy.ioEvents[j++] = *ioEvtIt;
-				}
-			} else {
-				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
-			}
+			exportProcess(*ptr, exportState->processList[i]);
 
 			state->readyList.pop();
 			state->readyList.emplace(ptr);
@@ -346,28 +306,7 @@ OSStateCompat* exported getOSState() {
 		i = 0;
 		exportState->reentryList = new ProcessCompat[exportState->numReentering];
 		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
-			Process& proc = **it;
-			ProcessCompat& copy = exportState->reentryList[i];
-
-			copy.id = proc.id;
-			copy.name = proc.name.c_str();
-			copy.arrivalTime = proc.arrivalTime;
-			copy.doneTime = proc.doneTime;
-			copy.reqProcessorTime = proc.reqProcessorTime;
-			copy.processorTime = proc.processorTime;
-			copy.state = proc.state;
-
-			copy.numIOEvents = proc.ioEvents.size();
-			if (copy.numIOEvents > 0) {
-				copy.ioEvents = new IOEvent[copy.numIOEvents];
-
-				uint j = 0;
-				for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
-					copy.ioEvents[j++] = *ioEvtIt;
-				}
-			} else {
-				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
-			}
+			exportProcess(**it, exportState->reentryList[i]);
 		}
 
 		prevReentryListSize = exportState->numReentering;
