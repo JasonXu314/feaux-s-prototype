@@ -14,3 +14,7 @@ export function prettyState(state: ProcessState): string {
 			return 'whoops...';
 	}
 }
+
+export function height(metrics: TextMetrics): number {
+	return metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent;
+}

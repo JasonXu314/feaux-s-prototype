@@ -24,6 +24,7 @@ const Index: NextPage = () => {
 
 			return () => {
 				cancel();
+				osEngine.stop();
 			};
 		}
 	}, [osEngine]);
@@ -60,15 +61,21 @@ const Index: NextPage = () => {
 					<Button label="Spawn" onClick={() => osEngine?.spawn(selectedProgram)} />
 					<Dropdown value={selectedProgram} onChange={(evt) => setSelectedProgram(evt.value)} options={availablePrograms} />
 				</div>
-				<InputNumber
-					value={clockDelay}
-					onValueChange={(evt) => {
-						if (evt.value) {
-							setClockDelay(evt.value);
-							wasmEngine?.setClockDelay(evt.value);
-						}
-					}}
-				/>
+				<div className="flex align-items-center gap-2">
+					<label htmlFor="clock-delay" className="font-bold">
+						Clock&nbsp;Delay
+					</label>
+					<InputNumber
+						inputId="clock-delay"
+						value={clockDelay}
+						onValueChange={(evt) => {
+							if (evt.value) {
+								setClockDelay(evt.value);
+								wasmEngine?.setClockDelay(evt.value);
+							}
+						}}
+					/>
+				</div>
 			</div>
 			<Canvas onLoad={onLoad} />
 		</div>

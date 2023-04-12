@@ -28,7 +28,7 @@ OSStateCompat* exportState = nullptr;
 void initOS();
 
 int main() {
-	cout << sizeof(ProcessCompat) << endl;
+	cout << sizeof(ProcessCompat) << " " << sizeof(StepAction) << " " << sizeof(State) << endl;
 
 	machineState = new MachineState{4, 500, new bool[4]{true, true, true, true}, new Process*[4]};
 
@@ -250,7 +250,7 @@ OSStateCompat* exported getOSState() {
 	}
 	if (exportState->reentryList != nullptr) {
 		for (uint i = 0; i < prevReentryListSize; i++) {
-			delete[] exportState->readyList[i].ioEvents;
+			delete[] exportState->reentryList[i].ioEvents;
 		}
 
 		delete[] exportState->reentryList;
@@ -279,7 +279,7 @@ OSStateCompat* exported getOSState() {
 			exportState->interrupts[i] = *it;
 		}
 	} else {
-		exportState->interrupts = nullptr;	// should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+		exportState->interrupts = nullptr;	// should be ignored on the other end if there are 0 interrupts, but set it to nullptr anyway for insurance
 	}
 
 	exportState->numReady = state->readyList.size();
@@ -289,7 +289,7 @@ OSStateCompat* exported getOSState() {
 		for (; i < exportState->numReady; i++) {
 			Process* ptr = state->readyList.front();
 
-			exportProcess(*ptr, exportState->processList[i]);
+			exportProcess(*ptr, exportState->readyList[i]);
 
 			state->readyList.pop();
 			state->readyList.emplace(ptr);
@@ -305,14 +305,14 @@ OSStateCompat* exported getOSState() {
 	if (exportState->numReentering > 0) {
 		i = 0;
 		exportState->reentryList = new ProcessCompat[exportState->numReentering];
-		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
+		for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++, i++) {
 			exportProcess(**it, exportState->reentryList[i]);
 		}
 
 		prevReentryListSize = exportState->numReentering;
 	} else {
 		prevReentryListSize = 0;
-		exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+		exportState->reentryList = nullptr;	 // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 	}
 
 	i = 0;

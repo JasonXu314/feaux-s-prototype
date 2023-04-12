@@ -79,15 +79,19 @@ export type OSState = {
 	processList: Process[];
 	interrupts: IOInterrupt[];
 	readyList: Process[];
+	reentryList: Process[];
 	stepAction: StepAction[];
 	time: number;
+	paused: boolean;
 };
 
 export type RawOSState = {
-	processList: Ptr<Ptr<Process>>;
+	processList: Ptr<Process>;
 	interrupts: Ptr<IOInterrupt>;
-	readyList: Ptr<Ptr<Process>>;
+	readyList: Ptr<Process>;
+	reentryList: Ptr<Process>;
 	stepAction: Ptr<StepAction>;
 	time: number;
+	paused: boolean;
 };
 

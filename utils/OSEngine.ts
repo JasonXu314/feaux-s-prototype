@@ -1,9 +1,10 @@
-import { CPUIndicator } from './CPUIndicator';
 import type { Entity } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
 import { Instruction, Opcode } from './types';
+import { CPUIndicator } from './ui/CPU';
+import { ReadyListIndicator } from './ui/ReadyList';
 
 export interface ProgramDescriptor {
 	name: string;
@@ -12,7 +13,8 @@ export interface ProgramDescriptor {
 
 const DEFAULT_PROGRAMS: ProgramDescriptor[] = [
 	{ name: 'Standard Worker', file: 'worker' },
-	{ name: 'IO Worker', file: 'io' }
+	{ name: 'IO Worker', file: 'io' },
+	{ name: 'More Work + IO', file: 'more-work' }
 ];
 
 interface EngineEvents {
@@ -34,8 +36,10 @@ export class OSEngine {
 	private readonly context: CanvasRenderingContext2D;
 	private readonly entities: Entity[] = [];
 	private readonly renderEngine: RenderEngine;
-	private readonly cpuIndicators: CPUIndicator[] = [];
 	private readonly programs: Map<string, Instruction[]> = new Map();
+
+	private readonly cpuIndicators: CPUIndicator[] = [];
+	private readonly readyListIndicator: ReadyListIndicator = new ReadyListIndicator();
 
 	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
@@ -70,6 +74,7 @@ export class OSEngine {
 				this.cpuIndicators.push(indicator);
 				this.entities.push(indicator);
 			}
+			this.entities.push(this.readyListIndicator);
 
 			this._listeners = { entityClicked: [], click: [], entityDblClicked: [], finishLoad: [] };
 
@@ -172,9 +177,12 @@ export class OSEngine {
 		this.context.fillStyle = 'black';
 
 		const machineState = this.wasmEngine.getMachineState();
+		const osState = this.wasmEngine.getOSState();
 		this.cpuIndicators.forEach((cpu, i) =>
 			cpu.render(this.renderEngine, { available: machineState.available[i], process: machineState.available[i] ? null : machineState.runningProcess[i] })
 		);
+
+		this.readyListIndicator.render(this.renderEngine, osState.readyList);
 
 		if (this._mouseDelta) {
 			this._mouseDelta = new Point();

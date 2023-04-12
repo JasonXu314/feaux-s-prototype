@@ -1,8 +1,8 @@
-import { Entity } from './Entity';
-import { Point } from './Point';
-import { RenderEngine } from './RenderEngine';
-import { Process } from './types';
-import { prettyState } from './utils';
+import { Entity } from '../Entity';
+import { Point } from '../Point';
+import { RenderEngine } from '../RenderEngine';
+import { Process } from '../types';
+import { prettyState } from '../utils';
 
 interface CPUData {
 	available: boolean;

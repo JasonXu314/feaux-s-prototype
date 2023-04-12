@@ -16,6 +16,17 @@ struct Process;
 struct IOInterrupt;
 
 struct ProcessCompat {
+	ProcessCompat()
+		: id(-1),
+		  name(nullptr),
+		  arrivalTime(-1),
+		  doneTime(-1),
+		  reqProcessorTime(-1),
+		  processorTime(-1),
+		  state(State::ready),
+		  numIOEvents(-1),
+		  ioEvents(nullptr) {}
+
 	uint id;
 	const char* name;
 	long arrivalTime;

@@ -12,7 +12,7 @@ class MyDocument extends Document {
 			<Html>
 				<Head>
 					<script src="/main.js" />
-					<style>{`body { font-family: (--font-family); }`}</style>
+					<style>{`* { font-family: var(--font-family); }`}</style>
 					<link rel="stylesheet" href="https://unpkg.com/primeflex@^3/primeflex.css"></link>
 				</Head>
 				<body>

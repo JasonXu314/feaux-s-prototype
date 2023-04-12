@@ -1,5 +1,5 @@
 import { Memory } from './Memory';
-import { IOEvent, Instruction, MachineState, Process, Ptr, RawMachineState, RawOSState } from './types';
+import { IOEvent, IOInterrupt, Instruction, MachineState, OSState, Process, Ptr, RawMachineState, RawOSState } from './types';
 
 export interface WASMModule {
 	HEAP8: Int8Array;
@@ -66,6 +66,47 @@ export class WASMEngine {
 			clockDelay,
 			available,
 			runningProcess
+		};
+	}
+
+	public getOSState(): OSState {
+		const ptr = this.module.asm.getOSState();
+
+		const numProcesses = this.memory.readUint32(ptr);
+		const processListPtr = this.memory.readUint32(ptr + 4);
+		// console.log(numProcesses, processListPtr);
+		const processList = new Array(numProcesses).fill(null).map((_, i) => this.readProcess(processListPtr + i * 36));
+
+		const numInterrupts = this.memory.readUint32(ptr + 8);
+		const interruptsPtr = this.memory.readUint32(ptr + 12);
+		const interrupts = new Array(numInterrupts).fill(null).map<IOInterrupt>((_, i) => ({
+			ioEventID: this.memory.readUint32(interruptsPtr + i * 8),
+			procID: this.memory.readUint32(interruptsPtr + i * 8 + 4)
+		}));
+
+		const numReady = this.memory.readUint32(ptr + 16);
+		const readyListPtr = this.memory.readUint32(ptr + 20);
+		const readyList = new Array(numReady).fill(null).map((_, i) => this.readProcess(readyListPtr + i * 36));
+
+		const numReentering = this.memory.readUint32(ptr + 24);
+		const reenteringListPtr = this.memory.readUint32(ptr + 28);
+		const reentryList = new Array(numReentering).fill(null).map((_, i) => this.readProcess(reenteringListPtr + i * 36));
+
+		const numStepAction = this.getMachineState().numCores;
+		const stepActionPtr = this.memory.readUint32(ptr + 32);
+		const stepAction = new Array(numStepAction).fill(null).map((_, i) => this.memory.readUint32(stepActionPtr + i * 4));
+
+		const time = this.memory.readUint32(ptr + 36);
+		const paused = this.memory.readUint8(ptr + 40) === 1;
+
+		return {
+			processList,
+			interrupts,
+			readyList,
+			reentryList,
+			stepAction,
+			time,
+			paused
 		};
 	}
 
