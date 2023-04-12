@@ -101,12 +101,13 @@ int main(int argc, char* argv[]) {
 					break;
 				case StepAction::BEGIN_RUN:
 					if (!state->readyList.empty()) {
-						machineState->runningProcess[core] = state->readyList.front();
+						runningProcess = state->readyList.front();
 						state->readyList.pop();
 
 						runningProcess->state = processing;
 						runningProcess->processorTime++;
 						machineState->available[core] = false;
+						machineState->runningProcess[core] = runningProcess;
 					} else {
 						cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
 						return 1;
@@ -203,7 +204,7 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 				proc->ioEvents.push_back(IOEvent(proc->reqProcessorTime, instruction.operand, ioID++));
 				break;
 			default:
-				return;
+				return -1;
 		}
 	}
 

@@ -2,6 +2,7 @@ import { Entity } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { Process } from './types';
+import { prettyState } from './utils';
 
 interface CPUData {
 	available: boolean;
@@ -13,39 +14,62 @@ const WIDTH = 600,
 	MARGIN = 25;
 
 export class CPUIndicator extends Entity {
+	private center: Point = new Point();
+
 	constructor(private readonly core: number) {
 		super();
 	}
 
 	public render(renderEngine: RenderEngine, data: CPUData): void {
-		const center = new Point(-renderEngine.width / 2 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 25) - (HEIGHT + MARGIN) * this.core);
+		this.center = this._calculateCenter(renderEngine);
 
-		renderEngine.fillRect(center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? 'green' : 'red');
-		renderEngine.rect(center, WIDTH, HEIGHT, 'black');
+		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? 'green' : 'red');
+		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
 
 		const label = `Core ${this.core}`;
 		const metrics = renderEngine.measure(label);
 		renderEngine.text(
-			center.add(
+			this.center.add(
 				new Point(-WIDTH / 2 + 10 + metrics.width / 2 + 5, HEIGHT / 2 - (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2 - 5)
 			),
 			label
 		);
 
 		if (data.available) {
-			renderEngine.text(center.add(new Point(0, -14)), 'Free', { fontSize: 64 });
+			renderEngine.text(this.center.add(new Point(0, -14)), 'Free', { fontSize: 64 });
 		} else {
 			const progressBarWidth = WIDTH * 0.9;
 			const yOffset = -HEIGHT / 2 + 40;
 			const progressWidth = progressBarWidth * (data.process!.processorTime / data.process!.reqProcessorTime);
 
-			renderEngine.fillRect(center.add(new Point(5 - progressBarWidth / 2 + progressWidth / 2, yOffset)), progressWidth, 25, 'green');
-			renderEngine.rect(center.add(new Point(5, yOffset)), progressBarWidth, 25, 'black');
+			renderEngine.fillRect(this.center.add(new Point(5 - progressBarWidth / 2 + progressWidth / 2, yOffset)), progressWidth, 25, 'green');
+			renderEngine.rect(this.center.add(new Point(5, yOffset)), progressBarWidth, 25, 'black');
+
+			const processNameLabel = `Process: ${data.process!.name}`;
+			const nameMetrics = renderEngine.measure(processNameLabel);
+			renderEngine.text(this.center.add(new Point(-WIDTH / 2 + 25 + nameMetrics.width / 2, 40)), processNameLabel);
+
+			const pidLabel = `PID: ${data.process!.id}`;
+			const pidMetrics = renderEngine.measure(pidLabel);
+			renderEngine.text(this.center.add(new Point(-WIDTH / 2 + 25 + pidMetrics.width / 2, 25)), pidLabel);
+
+			const stateLabel = `State: ${prettyState(data.process!.state)}`;
+			const stateMetrics = renderEngine.measure(stateLabel);
+			renderEngine.text(this.center.add(new Point(-WIDTH / 2 + 25 + stateMetrics.width / 2, 10)), stateLabel);
 		}
 	}
 
-	public selectedBy(point: Point, getMetrics: (label: string) => TextMetrics): boolean {
-		return false;
+	public selectedBy(point: Point): boolean {
+		return (
+			point.x >= this.center.x - WIDTH / 2 &&
+			point.x <= this.center.x + WIDTH / 2 &&
+			point.y <= this.center.y + HEIGHT / 2 &&
+			point.y >= this.center.y - HEIGHT / 2
+		);
+	}
+
+	private _calculateCenter(renderEngine: RenderEngine): Point {
+		return new Point(-renderEngine.width / 2 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 25) - (HEIGHT + MARGIN) * this.core);
 	}
 }
 

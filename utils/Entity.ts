@@ -8,6 +8,6 @@ export interface Metadata {
 export type MouseData = { position: Point | null } & ({ down: true; delta: Point } | { down: false; delta: null });
 
 export abstract class Entity {
-	public abstract selectedBy(point: Point, getMetrics: (label: string) => TextMetrics): boolean;
+	public abstract selectedBy(point: Point): boolean;
 }
 
