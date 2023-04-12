@@ -12,7 +12,7 @@ EM_JS(void, jssleep, (int milis), { Asyncify.handleSleep(wakeUp => { setTimeout(
 // clang-format on
 
 extern "C" {
-void exported addProcess(Instruction* instructionList, uint size, char* processName);
+uint exported addProcess(Instruction* instructionList, uint size, char* processName);
 void exported pause();
 void exported unpause();
 
@@ -181,7 +181,7 @@ void initOS() {
 	state->ioModule = new IOModule(state->interrupts);
 }
 
-void exported addProcess(Instruction* instructionList, uint size, char* processName) {
+uint exported addProcess(Instruction* instructionList, uint size, char* processName) {
 	Process* proc = new Process();
 	uint ioID = 0;
 
@@ -209,6 +209,8 @@ void exported addProcess(Instruction* instructionList, uint size, char* processN
 
 	state->processList.push_back(proc);
 	state->readyList.emplace(proc);
+
+	return proc->id;
 }
 
 void exported pause() { state->paused = true; }

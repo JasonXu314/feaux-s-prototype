@@ -1,4 +1,5 @@
-import type { Entity, MouseData } from './Entity';
+import { CPUIndicator } from './CPUIndicator';
+import type { Entity } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
@@ -17,15 +18,18 @@ export enum MouseButton {
 	FORWARD
 }
 
-export class Engine {
+export class OSEngine {
 	private readonly context: CanvasRenderingContext2D;
-	private readonly layers: Entity[][] = [];
+	private readonly entities: Entity[] = [];
 	private readonly renderEngine: RenderEngine;
+	private readonly cpuIndicators: CPUIndicator[] = [];
 
+	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
 	private _mousePos: Point | null = null;
 	private _mouseDown = false;
 	private _mouseDelta: Point | null = null;
+	private _numIndicators: number = 0;
 
 	private _listeners: { [K in keyof EngineEvents]: EngineEvents[K][] };
 
@@ -46,6 +50,13 @@ export class Engine {
 		if (ctx) {
 			this.context = ctx;
 			this.renderEngine = new RenderEngine(ctx, canvas);
+
+			for (; this._numIndicators < 4; this._numIndicators++) {
+				const indicator = new CPUIndicator(this._numIndicators);
+
+				this.cpuIndicators.push(indicator);
+				this.entities.push(indicator);
+			}
 
 			this._listeners = { entityClicked: [], click: [], entityDblClicked: [] };
 
@@ -103,32 +114,6 @@ export class Engine {
 		}
 	}
 
-	public add(entity: Entity, layer: number): void {
-		while (layer >= this.layers.length) {
-			this.layers.push([]);
-		}
-
-		this.layers[layer].push(entity);
-	}
-
-	public remove(entity: Entity, layer?: number): void {
-		if (layer === undefined) {
-			for (const layer of this.layers) {
-				if (layer.includes(entity)) {
-					layer.splice(layer.indexOf(entity), 1);
-				}
-			}
-		} else {
-			if (!this.layers[layer]) {
-				throw new Error(`Layer ${layer} does not exist!`);
-			} else if (!this.layers[layer].includes(entity)) {
-				throw new Error(`Layer ${layer} does not contain entity!`);
-			} else {
-				this.layers[layer].splice(this.layers[layer].indexOf(entity), 1);
-			}
-		}
-	}
-
 	public start(): void {
 		this._tick();
 	}
@@ -142,7 +127,7 @@ export class Engine {
 	}
 
 	private _tick(): void {
-		requestAnimationFrame(() => this._tick());
+		this._nextTick = requestAnimationFrame(() => this._tick());
 
 		if (!this._mouseDown) {
 			this._updateSelectedEntity();
@@ -154,45 +139,33 @@ export class Engine {
 			this.canvas.style.cursor = 'unset';
 		}
 
-		this.layers.forEach((layer) => {
-			layer.forEach((entity) => {
-				entity.update({
-					selected: this._selectedEntity === entity,
-					mouse: { down: this._mouseDown, delta: this._mouseDelta, position: this._mousePos?.clone() || null } as MouseData
-				});
-			});
-		});
-
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		this.context.fillStyle = 'white';
 		this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 		this.context.fillStyle = 'black';
-		this.layers.forEach((layer) => {
-			layer.forEach((entity) => {
-				entity.render(this.renderEngine, {
-					selected: this._selectedEntity === entity,
-					mouse: null
-				});
-			});
-		});
+
+		const machineState = this.wasmEngine.getMachineState();
+		this.cpuIndicators.forEach((cpu, i) =>
+			cpu.render(this.renderEngine, { available: machineState.available[i], process: machineState.available[i] ? null : machineState.runningProcess[i] })
+		);
 
 		if (this._mouseDelta) {
 			this._mouseDelta = new Point();
 		}
 	}
 
+	public stop(): void {
+		cancelAnimationFrame(this._nextTick);
+	}
+
 	private _updateSelectedEntity(): void {
 		if (this._mousePos) {
-			const reversedLayers = this.layers.reduce<Entity[][]>((arr, layer) => [layer, ...arr], []);
+			const reversedEntities = this.entities.reduce<Entity[]>((arr, entity) => [entity, ...arr], []);
 
-			for (const layer of reversedLayers) {
-				const reversedEntities = layer.reduce<Entity[]>((arr, entity) => [entity, ...arr], []);
-
-				for (const entity of reversedEntities) {
-					if (entity.selectedBy(this._mousePos, (label: string) => this.renderEngine.measure(label))) {
-						this._selectedEntity = entity;
-						return;
-					}
+			for (const entity of reversedEntities) {
+				if (entity.selectedBy(this._mousePos, (label: string) => this.renderEngine.measure(label))) {
+					this._selectedEntity = entity;
+					return;
 				}
 			}
 		}

@@ -4,6 +4,7 @@ interface TextStyles {
 	underline: boolean;
 	underlineStyle: string | CanvasGradient | CanvasPattern;
 	underlineDashed: boolean;
+	fontSize: number;
 }
 
 interface ShapeStyles {
@@ -22,6 +23,14 @@ export class RenderEngine {
 		this.norm = new Point(canvas.width / 2, canvas.height / 2);
 	}
 
+	public get width(): number {
+		return this.canvas.width;
+	}
+
+	public get height(): number {
+		return this.canvas.height;
+	}
+
 	public line(from: Point, to: Point, width = 1, style: string | CanvasGradient | CanvasPattern = 'black') {
 		const [fx, fy] = this.spaceToCanvas(from);
 		const [tx, ty] = this.spaceToCanvas(to);
@@ -38,14 +47,16 @@ export class RenderEngine {
 		this.context.strokeStyle = 'black';
 	}
 
-	public rect(center: Point, width: number, height: number): void {
-		const [x, y] = this.norm.add(center.invert('y')).add(new Point(-width / 2, -height / 2));
+	public rect(center: Point, width: number, height: number, stroke: string | CanvasGradient): void {
+		const [x, y] = this.spaceToCanvas(center).add(new Point(-width / 2, -height / 2));
+
+		this.context.strokeStyle = stroke;
 
 		this.context.strokeRect(x, y, width, height);
 	}
 
 	public fillRect(center: Point, width: number, height: number, fillStyle: string | CanvasGradient): void {
-		const [x, y] = this.norm.add(center.invert('y')).add(new Point(-width / 2, -height / 2));
+		const [x, y] = this.spaceToCanvas(center).add(new Point(-width / 2, -height / 2));
 
 		this.context.fillStyle = fillStyle;
 
@@ -107,11 +118,13 @@ export class RenderEngine {
 		const defaultStyles: TextStyles = {
 			underline: false,
 			underlineStyle: 'black',
-			underlineDashed: false
+			underlineDashed: false,
+			fontSize: 12
 		};
 		const sx = { ...defaultStyles, ...styles };
 
 		this.context.fillStyle = 'black';
+		this.context.font = `${sx.fontSize}px sans-serif`;
 
 		this.context.fillText(text, x, y);
 
@@ -186,7 +199,17 @@ export class RenderEngine {
 		this.context.fill();
 	}
 
-	public measure(text: string): TextMetrics {
+	public measure(text: string, styles: Partial<TextStyles> = {}): TextMetrics {
+		const defaultStyles: TextStyles = {
+			underline: false,
+			underlineStyle: 'black',
+			underlineDashed: false,
+			fontSize: 12
+		};
+		const sx = { ...defaultStyles, ...styles };
+
+		this.context.font = `${sx.fontSize}px sans-serif`;
+
 		return this.context.measureText(text);
 	}
 

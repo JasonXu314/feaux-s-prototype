@@ -1,30 +1,34 @@
 import { NextPage } from 'next/types';
 import { Button } from 'primereact/button';
-import { useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { OSEngine } from '../utils/OSEngine';
 import { WASMEngine } from '../utils/WASMEngine';
 import { Opcode } from '../utils/types';
 
 const Index: NextPage = () => {
-	const [wasmEngine, setWASMEngine] = useState<WASMEngine | null>(null);
+	const wasmEngine = useRef<WASMEngine | null>(null);
+	const osEngine = useRef<OSEngine | null>(null);
 
-	useEffect(() => {
-		const wasmEngine = new WASMEngine((window as any).Module);
+	const setup = useCallback((canvas: HTMLCanvasElement) => {
+		const we = new WASMEngine((window as any).Module);
+		const oe = new OSEngine(canvas, we);
 
-		setWASMEngine(wasmEngine);
+		wasmEngine.current = we;
+		osEngine.current = oe;
 
-		// const int = setInterval(() => {
-		// 	console.log(wasmEngine.getMachineState());
-		// }, 1000);
-
-		// return () => {
-		// 	clearInterval(int);
-		// };
+		oe.start();
 	}, []);
 
 	return (
 		<div>
-			<h1>Test</h1>
-			<Button label="Button" icon="pi pi-check" onClick={() => wasmEngine?.addProcess([{ opcode: Opcode.WORK, operand: 10 }], 'test process')} />
+			<Button
+				label="Button"
+				icon="pi pi-check"
+				onClick={() => {
+					wasmEngine.current?.addProcess([{ opcode: Opcode.WORK, operand: 10 }], 'test process');
+				}}
+			/>
+			<canvas height="800" width="1200" ref={(elem) => elem && setup(elem)} />
 		</div>
 	);
 };
