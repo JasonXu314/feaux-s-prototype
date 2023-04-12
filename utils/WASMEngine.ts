@@ -38,9 +38,7 @@ export class WASMEngine {
 		});
 
 		const strPtr = this.module.asm.allocString(name.length);
-		for (let i = 0; i < name.length; i++) {
-			this.memory.writeUint8(strPtr + i, name.codePointAt(i)!);
-		}
+		this.writeString(strPtr, name);
 
 		this.module.asm.addProcess(ilPtr, instructionList.length, strPtr);
 
@@ -79,6 +77,12 @@ export class WASMEngine {
 		}
 
 		return str;
+	}
+
+	private writeString(ptr: Ptr<string>, str: string): void {
+		for (let i = 0; i < str.length; i++) {
+			this.memory.writeUint8(ptr + i, str.codePointAt(i)!);
+		}
 	}
 
 	private readProcess(ptr: Ptr<Process>): Process {
