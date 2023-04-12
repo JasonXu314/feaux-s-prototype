@@ -14,7 +14,8 @@ export interface ProgramDescriptor {
 const DEFAULT_PROGRAMS: ProgramDescriptor[] = [
 	{ name: 'Standard Worker', file: 'worker' },
 	{ name: 'IO Worker', file: 'io' },
-	{ name: 'More Work + IO', file: 'more-work' }
+	{ name: 'More Work + IO', file: 'more-work' },
+	{ name: 'More IO + Work', file: 'more-io' }
 ];
 
 interface EngineEvents {
@@ -189,21 +190,21 @@ export class OSEngine {
 		}
 	}
 
+	public compileProgram(name: string, code: string): void {
+		const instructionList = code.split('\n').map((line) => {
+			const [mnemonic, operand] = line.split(' ');
+
+			return this._compile(mnemonic, operand);
+		});
+
+		this.programs.set(name, instructionList);
+	}
+
 	private _preloadProgram({ name, file }: ProgramDescriptor): Promise<void> {
 		return fetch(`/default-programs/${file}.fsp`)
 			.then((res) => res.text())
-			.then((code) => {
-				const instructionList = code.split('\n').map((line) => {
-					const [mnemonic, operand] = line.split(' ');
-
-					return this._compile(mnemonic, operand);
-				});
-
-				this.programs.set(name, instructionList);
-			})
-			.catch((err) => {
-				console.error('Error loading default program', err);
-			});
+			.then((code) => this.compileProgram(name, code))
+			.catch((err) => console.error(`Error loading default program ${name}`, err));
 	}
 
 	private _compile(mnemonic: string, operand: string): Instruction {
