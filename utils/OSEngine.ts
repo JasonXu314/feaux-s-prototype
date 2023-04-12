@@ -4,6 +4,7 @@ import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
 import { Instruction, Opcode } from './types';
 import { CPUIndicator } from './ui/CPU';
+import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
 
 export interface ProgramDescriptor {
@@ -41,6 +42,7 @@ export class OSEngine {
 
 	private readonly cpuIndicators: CPUIndicator[] = [];
 	private readonly readyListIndicator: ReadyListIndicator = new ReadyListIndicator();
+	private readonly processListIndicator: ProcessListIndicator = new ProcessListIndicator();
 
 	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
@@ -184,6 +186,7 @@ export class OSEngine {
 		);
 
 		this.readyListIndicator.render(this.renderEngine, osState.readyList);
+		this.processListIndicator.render(this.renderEngine, osState.processList);
 
 		if (this._mouseDelta) {
 			this._mouseDelta = new Point();

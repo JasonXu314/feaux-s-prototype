@@ -18,3 +18,4 @@ export function prettyState(state: ProcessState): string {
 export function height(metrics: TextMetrics): number {
 	return metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent;
 }
+

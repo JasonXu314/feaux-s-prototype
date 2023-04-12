@@ -1,7 +1,10 @@
 import { NextPage } from 'next/types';
 import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
+import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
 import { ToggleButton } from 'primereact/togglebutton';
 import { useCallback, useEffect, useState } from 'react';
 import Canvas from '../components/Canvas';
@@ -15,6 +18,9 @@ const Index: NextPage = () => {
 	const [selectedProgram, setSelectedProgram] = useState<string>('Standard Worker');
 	const [paused, setPaused] = useState<boolean>(false);
 	const [clockDelay, setClockDelay] = useState<number>(500);
+	const [writingProgram, setWritingProgram] = useState<boolean>(false);
+	const [programName, setProgramName] = useState<string>('');
+	const [programCode, setProgramCode] = useState<string>('');
 
 	useEffect(() => {
 		if (osEngine) {
@@ -61,6 +67,7 @@ const Index: NextPage = () => {
 					<Button label="Spawn" onClick={() => osEngine?.spawn(selectedProgram)} />
 					<Dropdown value={selectedProgram} onChange={(evt) => setSelectedProgram(evt.value)} options={availablePrograms} />
 				</div>
+				<Button label="Create&nbsp;Program" icon="pi pi-plus" className="flex-none" onClick={() => setWritingProgram(!writingProgram)} />
 				<div className="flex align-items-center gap-2">
 					<label htmlFor="clock-delay" className="font-bold">
 						Clock&nbsp;Delay
@@ -78,6 +85,33 @@ const Index: NextPage = () => {
 				</div>
 			</div>
 			<Canvas onLoad={onLoad} />
+			<Dialog
+				header="Program Editor"
+				visible={writingProgram}
+				onHide={() => {
+					setWritingProgram(false);
+					setProgramName('');
+					setProgramCode('');
+				}}>
+				<span className="p-float-label mt-4">
+					<InputText id="program-name" value={programName} onChange={(evt) => setProgramName(evt.target.value)} />
+					<label htmlFor="program-name">Program Name</label>
+				</span>
+				<span className="p-float-label mt-5">
+					<InputTextarea id="program-code" value={programCode} onChange={(evt) => setProgramCode(evt.target.value)} rows={20} cols={60} />
+					<label htmlFor="program-code">Program Code</label>
+				</span>
+				<Button
+					label="Add Program"
+					onClick={() => {
+						osEngine?.compileProgram(programName, programCode);
+						setAvilablePrograms(osEngine!.getPrograms());
+						setWritingProgram(false);
+						setProgramName('');
+						setProgramCode('');
+					}}
+				/>
+			</Dialog>
 		</div>
 	);
 };

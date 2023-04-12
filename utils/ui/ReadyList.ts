@@ -9,10 +9,6 @@ export class ReadyListIndicator extends Entity {
 	private height: number = 0;
 	private width: number = 0;
 
-	constructor() {
-		super();
-	}
-
 	public render(renderEngine: RenderEngine, readyList: Process[]): void {
 		const { center, HEIGHT, WIDTH } = this._calculateDims(renderEngine, readyList.length);
 		this.center = center;
@@ -20,7 +16,6 @@ export class ReadyListIndicator extends Entity {
 		this.width = WIDTH;
 
 		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'Ready List', { fontSize: 24 });
-		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, 'white');
 		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
 
 		if (readyList.length > 0) {
