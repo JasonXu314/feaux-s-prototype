@@ -163,7 +163,7 @@ export class OSEngine {
 			const reversedEntities = this.entities.reduce<Entity[]>((arr, entity) => [entity, ...arr], []);
 
 			for (const entity of reversedEntities) {
-				if (entity.selectedBy(this._mousePos, (label: string) => this.renderEngine.measure(label))) {
+				if (entity.selectedBy(this._mousePos)) {
 					this._selectedEntity = entity;
 					return;
 				}
