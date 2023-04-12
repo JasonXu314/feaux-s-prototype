@@ -26,7 +26,7 @@ OSStateCompat* exportState = nullptr;
 
 void initOS();
 
-int main(int argc, char* argv[]) {
+int main() {
 	cout << sizeof(ProcessCompat) << endl;
 
 	machineState = new MachineState{4, 250, new bool[4]{true, true, true, true}, new Process*[4]};
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 							return 1;
 						} else {
 							originProcess->state = ready;
-							state->readyList.emplace(originProcess);
+							state->reentryList.push_back(originProcess);
 						}
 					} else {
 						cerr << "Debug, core " << core << ": trying to handle nonexistent interrupt" << endl;
@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
 								state->ioModule->submitIORequest(state->time, event, *runningProcess);
 
 								runningProcess = nullptr;
+								machineState->runningProcess[core] = nullptr;
 								machineState->available[core] = true;
 							} else {
 								cerr << "Debug, core " << core << ": handling io request at wrong time" << endl;
@@ -153,6 +154,7 @@ int main(int argc, char* argv[]) {
 							runningProcess->doneTime = state->time;
 
 							runningProcess = nullptr;
+							machineState->runningProcess[core] = nullptr;
 							machineState->available[core] = true;
 						} else {
 							cerr << "Debug, core " << core << ": running process completing at incorrect time" << endl;
@@ -166,6 +168,11 @@ int main(int argc, char* argv[]) {
 					break;
 			}
 		}
+
+		for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++) {
+			state->readyList.emplace(*it);
+		}
+		state->reentryList.clear();
 
 	skip:
 		jssleep(machineState->clockDelay);
@@ -218,7 +225,7 @@ void exported pause() { state->paused = true; }
 void exported unpause() { state->paused = false; }
 
 OSStateCompat* exported getOSState() {
-	static uint prevProcListSize = 0;
+	static uint prevProcListSize = 0, prevReadyListSize = 0, prevReentryListSize = 0;
 
 	if (exportState == nullptr) {
 		exportState = new OSStateCompat();
@@ -232,7 +239,20 @@ OSStateCompat* exported getOSState() {
 		delete[] exportState->processList;
 	}
 	if (exportState->interrupts != nullptr) delete[] exportState->interrupts;
-	if (exportState->readyList != nullptr) delete[] exportState->readyList;
+	if (exportState->readyList != nullptr) {
+		for (uint i = 0; i < prevReadyListSize; i++) {
+			delete[] exportState->readyList[i].ioEvents;
+		}
+
+		delete[] exportState->readyList;
+	}
+	if (exportState->reentryList != nullptr) {
+		for (uint i = 0; i < prevReentryListSize; i++) {
+			delete[] exportState->readyList[i].ioEvents;
+		}
+
+		delete[] exportState->reentryList;
+	}
 	if (exportState->stepAction != nullptr) delete[] exportState->stepAction;
 
 	uint i = 0;
@@ -264,9 +284,10 @@ OSStateCompat* exported getOSState() {
 				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 			}
 		}
-		prevProcListSize = state->processList.size();
-	} else {
+
 		prevProcListSize = exportState->numProcesses;
+	} else {
+		prevProcListSize = 0;
 		exportState->processList = nullptr;	 // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 	}
 
@@ -313,7 +334,45 @@ OSStateCompat* exported getOSState() {
 			state->readyList.pop();
 			state->readyList.emplace(ptr);
 		}
+
+		prevReadyListSize = exportState->numReady;
 	} else {
+		prevReadyListSize = 0;
+		exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+	}
+
+	exportState->numReentering = state->reentryList.size();
+	if (exportState->numReentering > 0) {
+		i = 0;
+		exportState->reentryList = new ProcessCompat[exportState->numReentering];
+		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
+			Process& proc = **it;
+			ProcessCompat& copy = exportState->reentryList[i];
+
+			copy.id = proc.id;
+			copy.name = proc.name.c_str();
+			copy.arrivalTime = proc.arrivalTime;
+			copy.doneTime = proc.doneTime;
+			copy.reqProcessorTime = proc.reqProcessorTime;
+			copy.processorTime = proc.processorTime;
+			copy.state = proc.state;
+
+			copy.numIOEvents = proc.ioEvents.size();
+			if (copy.numIOEvents > 0) {
+				copy.ioEvents = new IOEvent[copy.numIOEvents];
+
+				uint j = 0;
+				for (auto ioEvtIt = proc.ioEvents.begin(); ioEvtIt != proc.ioEvents.end(); ioEvtIt++) {
+					copy.ioEvents[j++] = *ioEvtIt;
+				}
+			} else {
+				copy.ioEvents = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+		}
+
+		prevReentryListSize = exportState->numReentering;
+	} else {
+		prevReentryListSize = 0;
 		exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 	}
 

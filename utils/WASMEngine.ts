@@ -20,6 +20,8 @@ export interface WASMModule {
 		freeString(addr: Ptr<string>): void;
 		getMachineState(): Ptr<RawMachineState>;
 		getOSState(): Ptr<RawOSState>;
+		pause(): void;
+		unpause(): void;
 	};
 }
 
@@ -64,6 +66,14 @@ export class WASMEngine {
 			available,
 			runningProcess
 		};
+	}
+
+	public pause(): void {
+		this.module.asm.pause();
+	}
+
+	public unpause(): void {
+		this.module.asm.unpause();
 	}
 
 	private readString(ptr: Ptr<string>): string {

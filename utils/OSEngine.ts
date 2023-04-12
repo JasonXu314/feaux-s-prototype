@@ -3,11 +3,23 @@ import type { Entity } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
+import { Instruction, Opcode } from './types';
+
+export interface ProgramDescriptor {
+	name: string;
+	file: string;
+}
+
+const DEFAULT_PROGRAMS: ProgramDescriptor[] = [
+	{ name: 'Standard Worker', file: 'worker' },
+	{ name: 'IO Worker', file: 'io' }
+];
 
 interface EngineEvents {
 	entityClicked: (entity: Entity, metadata: { button: MouseButton; spacePos: Point; pagePos: Point }) => void;
 	entityDblClicked: (entity: Entity) => void;
 	click: (evt: MouseEvent) => void;
+	finishLoad: () => void;
 }
 
 export enum MouseButton {
@@ -23,6 +35,7 @@ export class OSEngine {
 	private readonly entities: Entity[] = [];
 	private readonly renderEngine: RenderEngine;
 	private readonly cpuIndicators: CPUIndicator[] = [];
+	private readonly programs: Map<string, Instruction[]> = new Map();
 
 	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
@@ -58,7 +71,9 @@ export class OSEngine {
 				this.entities.push(indicator);
 			}
 
-			this._listeners = { entityClicked: [], click: [], entityDblClicked: [] };
+			this._listeners = { entityClicked: [], click: [], entityDblClicked: [], finishLoad: [] };
+
+			Promise.all(DEFAULT_PROGRAMS.map((descriptor) => this._preloadProgram(descriptor))).then(() => this._listeners.finishLoad.forEach((cb) => cb()));
 
 			canvas.addEventListener('mouseout', () => {
 				this._mousePos = null;
@@ -126,6 +141,18 @@ export class OSEngine {
 		};
 	}
 
+	public stop(): void {
+		cancelAnimationFrame(this._nextTick);
+	}
+
+	public getPrograms(): string[] {
+		return [...this.programs.keys()];
+	}
+
+	public spawn(program: string): void {
+		this.wasmEngine.addProcess(this.programs.get(program)!, program);
+	}
+
 	private _tick(): void {
 		this._nextTick = requestAnimationFrame(() => this._tick());
 
@@ -154,8 +181,34 @@ export class OSEngine {
 		}
 	}
 
-	public stop(): void {
-		cancelAnimationFrame(this._nextTick);
+	private _preloadProgram({ name, file }: ProgramDescriptor): Promise<void> {
+		return fetch(`/default-programs/${file}.fsp`)
+			.then((res) => res.text())
+			.then((code) => {
+				const instructionList = code.split('\n').map((line) => {
+					const [mnemonic, operand] = line.split(' ');
+
+					return this._compile(mnemonic, operand);
+				});
+
+				this.programs.set(name, instructionList);
+			})
+			.catch((err) => {
+				console.error('Error loading default program', err);
+			});
+	}
+
+	private _compile(mnemonic: string, operand: string): Instruction {
+		switch (mnemonic) {
+			case 'nop':
+				return { opcode: Opcode.NOP, operand: -1 };
+			case 'work':
+				return { opcode: Opcode.WORK, operand: parseInt(operand) };
+			case 'io':
+				return { opcode: Opcode.IO, operand: parseInt(operand) };
+			default:
+				throw new Error(`Unrecognized mnemonic ${mnemonic}`);
+		}
 	}
 
 	private _updateSelectedEntity(): void {

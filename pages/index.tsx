@@ -1,34 +1,65 @@
 import { NextPage } from 'next/types';
 import { Button } from 'primereact/button';
-import { useCallback, useRef } from 'react';
+import { Dropdown } from 'primereact/dropdown';
+import { ToggleButton } from 'primereact/togglebutton';
+import { useCallback, useEffect, useState } from 'react';
+import Canvas from '../components/Canvas';
 import { OSEngine } from '../utils/OSEngine';
 import { WASMEngine } from '../utils/WASMEngine';
-import { Opcode } from '../utils/types';
 
 const Index: NextPage = () => {
-	const wasmEngine = useRef<WASMEngine | null>(null);
-	const osEngine = useRef<OSEngine | null>(null);
+	const [wasmEngine, setWASMEngine] = useState<WASMEngine | null>(null);
+	const [osEngine, setOSEngine] = useState<OSEngine | null>(null);
+	const [availablePrograms, setAvilablePrograms] = useState<string[]>([]);
+	const [selectedProgram, setSelectedProgram] = useState<string>('Standard Worker');
+	const [paused, setPaused] = useState<boolean>(false);
 
-	const setup = useCallback((canvas: HTMLCanvasElement) => {
-		const we = new WASMEngine((window as any).Module);
-		const oe = new OSEngine(canvas, we);
+	useEffect(() => {
+		if (osEngine) {
+			const cancel = osEngine.on('finishLoad', () => {
+				setAvilablePrograms(osEngine.getPrograms());
+			});
 
-		wasmEngine.current = we;
-		osEngine.current = oe;
+			return () => {
+				cancel();
+			};
+		}
+	}, [osEngine]);
 
-		oe.start();
+	const onLoad = useCallback((wasmEngine: WASMEngine, osEngine: OSEngine) => {
+		setWASMEngine(wasmEngine);
+		setOSEngine(osEngine);
 	}, []);
 
 	return (
 		<div>
-			<Button
-				label="Button"
-				icon="pi pi-check"
-				onClick={() => {
-					wasmEngine.current?.addProcess([{ opcode: Opcode.WORK, operand: 10 }], 'test process');
-				}}
-			/>
-			<canvas height="800" width="1200" ref={(elem) => elem && setup(elem)} />
+			<div className="flex gap-4">
+				<ToggleButton
+					checked={paused}
+					onChange={(evt) => {
+						setPaused(evt.value);
+
+						if (evt.value) {
+							wasmEngine?.pause();
+						} else {
+							wasmEngine?.unpause();
+						}
+					}}
+					onLabel="Paused"
+					offLabel="Running"
+					className="flex-none"
+					style={{
+						backgroundColor: paused ? 'var(--red-500)' : 'var(--green-600)',
+						border: paused ? 'var(--red-600)' : 'var(--green-700)',
+						color: 'white'
+					}}
+				/>
+				<div className="p-inputgroup">
+					<Button label="Spawn" onClick={() => osEngine?.spawn(selectedProgram)} />
+					<Dropdown value={selectedProgram} onChange={(evt) => setSelectedProgram(evt.value)} options={availablePrograms} />
+				</div>
+			</div>
+			<Canvas onLoad={onLoad} />
 		</div>
 	);
 };

@@ -13,6 +13,7 @@ class MyDocument extends Document {
 				<Head>
 					<script src="/main.js" />
 					<style>{`body { font-family: (--font-family); }`}</style>
+					<link rel="stylesheet" href="https://unpkg.com/primeflex@^3/primeflex.css"></link>
 				</Head>
 				<body>
 					<Main />

@@ -47,6 +47,7 @@ struct OSState {
 	std::list<Process*> processList;
 	std::list<IOInterrupt> interrupts;
 	std::queue<Process*> readyList;
+	std::list<Process*> reentryList;
 	StepAction* stepAction;
 	uint time;
 	bool paused;
@@ -60,6 +61,8 @@ struct OSStateCompat {
 	IOInterrupt* interrupts;
 	uint numReady;
 	ProcessCompat* readyList;
+	uint numReentering;
+	ProcessCompat* reentryList;
 	StepAction* stepAction;
 	uint time;
 	bool paused;

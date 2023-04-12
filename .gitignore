@@ -4,4 +4,4 @@ node_modules/
 
 .vscode/
 feaux-s/objects/
-public/*
+public/main.*
