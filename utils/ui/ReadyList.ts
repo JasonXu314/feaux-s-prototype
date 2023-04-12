@@ -49,6 +49,17 @@ export class ReadyListIndicator extends Entity {
 		const pidLabel = `PID: ${proc.id}`;
 		const pidMetrics = renderEngine.measure(pidLabel);
 		renderEngine.text(pos.add(new Point(-150 + pidMetrics.width / 2 + 5, 35 - height(nameMetrics) / 2 - 5)), pidLabel);
+
+		const progressLabel = 'Progress:';
+		const progressMetrics = renderEngine.measure(progressLabel);
+		renderEngine.text(pos.add(new Point(-150 + pidMetrics.width / 2 + 35, -height(progressMetrics) / 2)), progressLabel);
+
+		const progressBarWidth = 250;
+		const yOffset = -20;
+		const progressWidth = progressBarWidth * (proc.processorTime / proc.reqProcessorTime);
+
+		renderEngine.fillRect(pos.add(new Point(5 - progressBarWidth / 2 + progressWidth / 2, yOffset)), progressWidth, 15, 'green');
+		renderEngine.rect(pos.add(new Point(5, yOffset)), progressBarWidth, 15, 'black');
 	}
 
 	private _calculateDims(renderEngine: RenderEngine, count: number): { center: Point; HEIGHT: number; WIDTH: number } {
@@ -58,7 +69,7 @@ export class ReadyListIndicator extends Entity {
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 75))
+			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
 		};
 	}
 }
