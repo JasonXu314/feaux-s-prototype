@@ -36,7 +36,7 @@ const Index: NextPage = () => {
 
 	return (
 		<div>
-			<div className="flex gap-4">
+			<div className="flex gap-4 px-4 py-1">
 				<ToggleButton
 					checked={paused}
 					onChange={(evt) => {

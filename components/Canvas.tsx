@@ -25,7 +25,7 @@ const Canvas: React.FC<Props> = ({ onLoad }) => {
 		[onLoad]
 	);
 
-	return <canvas height="800" width="1200" ref={(elem) => elem && setup(elem)} />;
+	return <canvas height="800" width="1800" ref={(elem) => elem && setup(elem)} />;
 };
 
 export default memo(Canvas, ({ onLoad: prevOnLoad }, { onLoad }) => prevOnLoad === onLoad);
