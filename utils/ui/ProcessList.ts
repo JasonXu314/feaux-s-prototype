@@ -15,7 +15,7 @@ export class ProcessListIndicator extends Entity {
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
-		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'Ready List', { fontSize: 24 });
+		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'All Processes', { fontSize: 24 });
 		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
 
 		if (processList.length > 0) {
