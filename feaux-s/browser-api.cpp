@@ -126,14 +126,19 @@ OSStateCompat* exported getOSState() {
 		}
 
 		delete[] exportState->processList;
+		exportState->processList = nullptr;
 	}
-	if (exportState->interrupts != nullptr) delete[] exportState->interrupts;
+	if (exportState->interrupts != nullptr) {
+		delete[] exportState->interrupts;
+		exportState->interrupts = nullptr;
+	}
 	if (exportState->readyList != nullptr) {
 		for (uint i = 0; i < prevReadyListSize; i++) {
 			delete[] exportState->readyList[i].ioEvents;
 		}
 
 		delete[] exportState->readyList;
+		exportState->readyList = nullptr;
 	}
 	if (exportState->reentryList != nullptr) {
 		for (uint i = 0; i < prevReentryListSize; i++) {
@@ -141,9 +146,12 @@ OSStateCompat* exported getOSState() {
 		}
 
 		delete[] exportState->reentryList;
+		exportState->reentryList = nullptr;
 	}
-	if (exportState->stepAction != nullptr) delete[] exportState->stepAction;
-
+	if (exportState->stepAction != nullptr) {
+		delete[] exportState->stepAction;
+		exportState->stepAction = nullptr;
+	}
 	for (uint i = 0; i < NUM_LEVELS; i++) {
 		if (exportState->mlfReadyLists[i] != nullptr) {
 			for (uint j = 0; j < prevMLFReadyListSizes[i]; j++) {
@@ -151,6 +159,7 @@ OSStateCompat* exported getOSState() {
 			}
 
 			delete[] exportState->mlfReadyLists[i];
+			exportState->mlfReadyLists[i] = nullptr;
 		}
 	}
 
