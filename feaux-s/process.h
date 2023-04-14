@@ -13,8 +13,6 @@ it should enter a blocked state for IOEvent::duration time steps.
 
 #pragma once
 
-#include <emscripten.h>
-
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -22,8 +20,9 @@ it should enter a blocked state for IOEvent::duration time steps.
 #include <sstream>
 #include <vector>
 
+#include "decls.h"
+
 using namespace std;
-typedef unsigned int uint;
 
 struct IOEvent {
 	IOEvent() : id(9999999), time(-1), duration(0){};
@@ -35,8 +34,6 @@ struct IOEvent {
 	long duration;	// The duration that the process will be Blocked by this IOEvent
 };
 
-enum State { ready, processing, blocked, done };  // Used to track the process states
-
 struct Process {
 	Process() : id(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
 
@@ -47,23 +44,10 @@ struct Process {
 	long doneTime;			// Convenience variable, use this to keep track of when a process completes
 	long reqProcessorTime;	// Total amount of processor time needed
 	long processorTime;		// Amount of processor given to this process
-	uint level;
+	unsigned int level;
 	long processorTimeOnLevel;
 
 	State state;  // State of the process
 
 	list<IOEvent> ioEvents;	 // The IO events for this process, stored in order of the time into the process execution that they start
 };
-
-enum Opcode { NOP, WORK, IO };
-
-struct Instruction {
-	uint8_t opcode;
-	uint8_t operand;
-};
-
-extern "C" {
-// use EMSCRIPTEN_KEEPALIVE because including utils.h would introduce circular dependencies
-Instruction* EMSCRIPTEN_KEEPALIVE allocInstructionList(uint instructionCount);
-void EMSCRIPTEN_KEEPALIVE freeInstructionList(Instruction* ptr);
-}
