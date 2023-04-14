@@ -2,7 +2,7 @@ import { Entity, Metadata } from '../Entity';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process, ProcessState } from '../types';
-import { height, prettyState } from '../utils';
+import { STATUS_COLORS, height, prettyState } from '../utils';
 
 export class ProcessListIndicator extends Entity {
 	private center: Point = new Point();
@@ -40,7 +40,7 @@ export class ProcessListIndicator extends Entity {
 
 	private _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point, selected: boolean): void {
 		if (selected) {
-			renderEngine.fillRect(pos, 200, 50, '#60b0e0');
+			renderEngine.fillRect(pos, 200, 50, 'rgba(80, 144, 224, 0.5)');
 		}
 
 		renderEngine.rect(pos, 199, 49, 'black');
@@ -59,16 +59,16 @@ export class ProcessListIndicator extends Entity {
 
 		switch (proc.state) {
 			case ProcessState.DONE:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, 'green');
+				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.green);
 				break;
 			case ProcessState.PROCESSING:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, 'yellow');
+				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.yellow);
 				break;
 			case ProcessState.BLOCKED:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, 'red');
+				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.red);
 				break;
 			case ProcessState.READY:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, 'blue');
+				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.blue);
 				break;
 			default:
 				throw new Error('Invalid process state');
@@ -86,7 +86,7 @@ export class ProcessListIndicator extends Entity {
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25) - 325, renderEngine.height / 2 - (HEIGHT / 2 + 50))
+			center: new Point(-renderEngine.width / 2 + 625 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
 		};
 	}
 }

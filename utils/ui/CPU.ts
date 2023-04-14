@@ -2,7 +2,7 @@ import { Entity } from '../Entity';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process } from '../types';
-import { prettyState } from '../utils';
+import { STATUS_COLORS, prettyState } from '../utils';
 
 interface CPUData {
 	available: boolean;
@@ -24,7 +24,7 @@ export class CPUIndicator extends Entity {
 		this.center = this._calculateCenter(renderEngine);
 
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
-		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? 'green' : 'red');
+		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? STATUS_COLORS.green : STATUS_COLORS.blue);
 
 		const label = `Core ${this.core}`;
 		const metrics = renderEngine.measure(label);

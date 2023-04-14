@@ -18,7 +18,7 @@ void cleanupOS();
 Process* schedule(uint core);
 
 int main() {
-	cout << sizeof(ProcessCompat) << " " << sizeof(StepAction) << " " << sizeof(State) << endl;
+	cout << sizeof(OSStateCompat) << endl;
 
 	machineState = new MachineState{2, 500, new bool[2]{true, true}, new Process*[2]};
 
@@ -91,7 +91,12 @@ int main() {
 					for (uint i = 0; i < runningProcess->level; i++) {
 						if (!state->mlfLists[i].empty()) {
 							state->stepAction[core] = StepAction::BEGIN_RUN;
+							break;
 						}
+					}
+
+					if (state->stepAction[core] != StepAction::BEGIN_RUN) {
+						state->stepAction[core] = StepAction::CONTINUE_RUN;
 					}
 				} else {
 					state->stepAction[core] = StepAction::CONTINUE_RUN;	 // runnning process is still running
@@ -139,13 +144,16 @@ int main() {
 				case StepAction::CONTINUE_RUN:
 					if (runningProcess != nullptr) {
 						runningProcess->processorTime++;
+						if (state->strategy == SchedulingStrategy::MLF) {
+							runningProcess->processorTimeOnLevel++;
+						}
 
 						if (state->strategy == SchedulingStrategy::MLF && runningProcess->level < NUM_LEVELS - 1 &&
 							runningProcess->processorTimeOnLevel >= (0b10 << runningProcess->level)) {
 							runningProcess->state = ready;
 							runningProcess->level++;
 							runningProcess->processorTimeOnLevel = 0;
-							state->mlfLists[runningProcess->level].emplace(runningProcess);
+							state->reentryList.push_back(runningProcess);
 
 							machineState->available[core] = true;
 							machineState->runningProcess[core] = nullptr;

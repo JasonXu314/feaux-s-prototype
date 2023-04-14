@@ -20,5 +20,24 @@ export class Memory {
 	public readInt32(offset: number): number {
 		return this.dv.getInt32(offset, true);
 	}
+
+	public readString(ptr: number): string {
+		let str = '',
+			i = 0,
+			codePoint = -1;
+
+		while ((codePoint = this.readUint8(ptr + i)) !== 0) {
+			str += String.fromCodePoint(codePoint);
+			i++;
+		}
+
+		return str;
+	}
+
+	public writeString(ptr: number, str: string): void {
+		for (let i = 0; i < str.length; i++) {
+			this.writeUint8(ptr + i, str.codePointAt(i)!);
+		}
+	}
 }
 

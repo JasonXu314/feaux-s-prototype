@@ -92,6 +92,7 @@ export type OSState = {
 	stepAction: StepAction[];
 	time: number;
 	paused: boolean;
+	mlfReadyLists: Process[][];
 };
 
 export type RawOSState = {

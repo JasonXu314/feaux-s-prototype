@@ -1,5 +1,13 @@
 import { ProcessState, SchedulingStrategy } from './types';
 
+// colors pulled from astro design (https://www.astrouxds.com/patterns/status-system/)
+export const STATUS_COLORS = {
+	green: '#56F000',
+	yellow: '#FCE83A',
+	red: '#FF3838',
+	blue: '#2DCCFF'
+} as const;
+
 export function prettyState(state: ProcessState): string {
 	switch (state) {
 		case ProcessState.BLOCKED:

@@ -187,7 +187,10 @@ export class OSEngine {
 			cpu.render(this.renderEngine, { available: machineState.available[i], process: machineState.available[i] ? null : machineState.runningProcess[i] })
 		);
 
-		this.readyListIndicator.render(this.renderEngine, osState.readyList);
+		if (this._schedulingStrategy === SchedulingStrategy.MLF) {
+		} else {
+			this.readyListIndicator.render(this.renderEngine, osState.readyList);
+		}
 		this.processListIndicator.render(this.renderEngine, osState.processList, {
 			selected: this._selectedEntity === this.processListIndicator,
 			mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData

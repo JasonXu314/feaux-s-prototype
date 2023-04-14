@@ -118,6 +118,7 @@ OSStateCompat* exported getOSState() {
 
 	if (exportState == nullptr) {
 		exportState = new OSStateCompat();
+		// cout << (uintptr_t)&exportState->mlfReadyLists - (uintptr_t)&exportState->mlfNumReady << endl;
 	}
 
 	if (exportState->processList != nullptr) {
