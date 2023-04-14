@@ -16,6 +16,7 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 void exported pause();
 void exported unpause();
 void exported setClockDelay(uint delay);
+void exported setSchedulingStrategy(SchedulingStrategy strategy);
 
 OSStateCompat* exported getOSState();
 }
@@ -33,9 +34,9 @@ Process* schedule(uint core);
 int main() {
 	cout << sizeof(ProcessCompat) << " " << sizeof(StepAction) << " " << sizeof(State) << endl;
 
-	machineState = new MachineState{4, 500, new bool[4]{true, true, true, true}, new Process*[4]};
+	machineState = new MachineState{2, 500, new bool[2]{true, true}, new Process*[2]};
 
-	initOS(4, SchedulingStrategy::FIFO);
+	initOS(machineState->numCores, SchedulingStrategy::FIFO);
 
 	// keep running the loop until all processes have been added and have run to completion
 	while (true) {
@@ -217,7 +218,20 @@ int main() {
 		}
 
 		for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++) {
-			state->fifoReadyList.emplace(*it);
+			switch (state->strategy) {
+				case SchedulingStrategy::FIFO:
+					state->fifoReadyList.emplace(*it);
+					break;
+				case SchedulingStrategy::SJF:
+					state->sjfReadyList.emplace(*it);
+					break;
+				case SchedulingStrategy::SRT:
+					state->srtReadyList.emplace(*it);
+					break;
+				case SchedulingStrategy::MLF:
+					state->mlfLists[(*it)->level].emplace(*it);
+					break;
+			}
 		}
 		state->reentryList.clear();
 
@@ -246,6 +260,14 @@ void initOS(uint numCores, SchedulingStrategy strategy) {
 }
 
 void cleanupOS() {
+	for (auto it = state->processList.begin(); it != state->processList.end(); it++) {
+		delete *it;
+	}
+
+	if (state->strategy == SchedulingStrategy::MLF) {
+		delete[] state->mlfLists;
+	}
+
 	delete[] state->stepAction;
 	delete state->ioModule;
 	delete state;
@@ -311,6 +333,7 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 	proc->name = processName;
 	proc->arrivalTime = state->time;
 	proc->level = 0;
+	proc->processorTimeOnLevel = 0;
 
 	for (uint i = 0; i < size; i++) {
 		Instruction& instruction = instructionList[i];
@@ -356,8 +379,19 @@ void exported pause() { state->paused = true; }
 void exported unpause() { state->paused = false; }
 void exported setClockDelay(uint delay) { machineState->clockDelay = delay; }
 
+void exported setSchedulingStrategy(SchedulingStrategy strategy) {
+	cleanupOS();
+
+	for (uint i = 0; i < machineState->numCores; i++) {
+		machineState->available[i] = true;
+		machineState->runningProcess[i] = nullptr;
+	}
+
+	initOS(machineState->numCores, strategy);
+}
+
 OSStateCompat* exported getOSState() {
-	static uint prevProcListSize = 0, prevReadyListSize = 0, prevReentryListSize = 0;
+	static uint prevProcListSize = 0, prevReadyListSize = 0, prevReentryListSize = 0, prevMLFReadyListSizes[NUM_LEVELS] = {0};
 
 	if (exportState == nullptr) {
 		exportState = new OSStateCompat();
@@ -387,6 +421,16 @@ OSStateCompat* exported getOSState() {
 	}
 	if (exportState->stepAction != nullptr) delete[] exportState->stepAction;
 
+	for (uint i = 0; i < NUM_LEVELS; i++) {
+		if (exportState->mlfReadyLists[i] != nullptr) {
+			for (uint j = 0; j < prevMLFReadyListSizes[i]; j++) {
+				delete[] exportState->mlfReadyLists[i][j].ioEvents;
+			}
+
+			delete[] exportState->mlfReadyLists[i];
+		}
+	}
+
 	uint i = 0;
 	exportState->numProcesses = state->processList.size();
 	if (exportState->numProcesses > 0) {
@@ -412,23 +456,98 @@ OSStateCompat* exported getOSState() {
 		exportState->interrupts = nullptr;	// should be ignored on the other end if there are 0 interrupts, but set it to nullptr anyway for insurance
 	}
 
-	exportState->numReady = state->fifoReadyList.size();
-	if (exportState->numReady > 0) {
-		i = 0;
-		exportState->readyList = new ProcessCompat[exportState->numReady];
-		for (; i < exportState->numReady; i++) {
-			Process* ptr = state->fifoReadyList.front();
+	switch (state->strategy) {
+		case SchedulingStrategy::FIFO:
+			exportState->numReady = state->fifoReadyList.size();
+			if (exportState->numReady > 0) {
+				exportState->readyList = new ProcessCompat[exportState->numReady];
+				for (uint i = 0; i < exportState->numReady; i++) {
+					Process* ptr = state->fifoReadyList.front();
 
-			exportProcess(*ptr, exportState->readyList[i]);
+					exportProcess(*ptr, exportState->readyList[i]);
 
-			state->fifoReadyList.pop();
-			state->fifoReadyList.emplace(ptr);
-		}
+					state->fifoReadyList.pop();
+					state->fifoReadyList.push(ptr);
+				}
 
-		prevReadyListSize = exportState->numReady;
-	} else {
-		prevReadyListSize = 0;
-		exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+				prevReadyListSize = exportState->numReady;
+			} else {
+				prevReadyListSize = 0;
+				exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+			break;
+		case SchedulingStrategy::SJF:
+			exportState->numReady = state->sjfReadyList.size();
+			if (exportState->numReady > 0) {
+				exportState->readyList = new ProcessCompat[exportState->numReady];
+				list<Process*> copy;
+				for (uint i = 0; i < exportState->numReady; i++) {
+					Process* ptr = state->sjfReadyList.top();
+
+					exportProcess(*ptr, exportState->readyList[i]);
+
+					state->sjfReadyList.pop();
+					copy.push_back(ptr);
+				}
+				for (auto it = copy.begin(); it != copy.end(); it++) {
+					state->sjfReadyList.push(*it);
+				}
+
+				prevReadyListSize = exportState->numReady;
+			} else {
+				prevReadyListSize = 0;
+				exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+			break;
+		case SchedulingStrategy::SRT:
+			exportState->numReady = state->srtReadyList.size();
+			if (exportState->numReady > 0) {
+				exportState->readyList = new ProcessCompat[exportState->numReady];
+				list<Process*> copy;
+				for (uint i = 0; i < exportState->numReady; i++) {
+					Process* ptr = state->srtReadyList.top();
+
+					exportProcess(*ptr, exportState->readyList[i]);
+
+					state->srtReadyList.pop();
+					copy.push_back(ptr);
+				}
+				for (auto it = copy.begin(); it != copy.end(); it++) {
+					state->srtReadyList.push(*it);
+				}
+
+				prevReadyListSize = exportState->numReady;
+			} else {
+				prevReadyListSize = 0;
+				exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+			break;
+		case SchedulingStrategy::MLF:
+			for (uint i = 0; i < NUM_LEVELS; i++) {
+				uint size = state->mlfLists[i].size();
+
+				exportState->mlfNumReady[i] = size;
+
+				if (size > 0) {
+					exportState->mlfReadyLists[i] = new ProcessCompat[size];
+					for (uint j = 0; j < size; j++) {
+						Process* ptr = state->mlfLists[i].front();
+
+						exportProcess(*ptr, exportState->mlfReadyLists[i][j]);
+
+						state->mlfLists[i].pop();
+						state->mlfLists[i].push(ptr);
+					}
+
+					prevMLFReadyListSizes[i] = size;
+				} else {
+					prevMLFReadyListSizes[i] = 0;
+					exportState->mlfReadyLists[i] =
+						nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+				}
+			}
+
+			break;
 	}
 
 	exportState->numReentering = state->reentryList.size();

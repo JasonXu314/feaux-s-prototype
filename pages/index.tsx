@@ -10,6 +10,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Canvas from '../components/Canvas';
 import { OSEngine } from '../utils/OSEngine';
 import { WASMEngine } from '../utils/WASMEngine';
+import { SchedulingStrategy } from '../utils/types';
+import { prettyStrategy } from '../utils/utils';
 
 const Index: NextPage = () => {
 	const [wasmEngine, setWASMEngine] = useState<WASMEngine | null>(null);
@@ -21,6 +23,7 @@ const Index: NextPage = () => {
 	const [writingProgram, setWritingProgram] = useState<boolean>(false);
 	const [programName, setProgramName] = useState<string>('');
 	const [programCode, setProgramCode] = useState<string>('');
+	const [schedulingStrategy, setSchedulingStrategy] = useState<SchedulingStrategy>(SchedulingStrategy.FIFO);
 
 	useEffect(() => {
 		if (osEngine) {
@@ -34,6 +37,12 @@ const Index: NextPage = () => {
 			};
 		}
 	}, [osEngine]);
+
+	useEffect(() => {
+		if (osEngine) {
+			osEngine.setSchedulingStrategy(schedulingStrategy);
+		}
+	}, [osEngine, schedulingStrategy]);
 
 	const onLoad = useCallback((wasmEngine: WASMEngine, osEngine: OSEngine) => {
 		setWASMEngine(wasmEngine);
@@ -67,6 +76,14 @@ const Index: NextPage = () => {
 					<Button label="Run" onClick={() => osEngine?.spawn(selectedProgram)} />
 					<Dropdown value={selectedProgram} onChange={(evt) => setSelectedProgram(evt.value)} options={availablePrograms} />
 				</div>
+				<Dropdown
+					value={schedulingStrategy}
+					onChange={(evt) => setSchedulingStrategy(evt.value)}
+					options={[SchedulingStrategy.FIFO, SchedulingStrategy.SJF, SchedulingStrategy.SRT, SchedulingStrategy.MLF].map((strategy) => ({
+						value: strategy,
+						label: prettyStrategy(strategy)
+					}))}
+				/>
 				<Button label="Create&nbsp;Program" icon="pi pi-plus" className="flex-none" onClick={() => setWritingProgram(!writingProgram)} />
 				<div className="flex align-items-center gap-2">
 					<label htmlFor="clock-delay" className="font-bold">

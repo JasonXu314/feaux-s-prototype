@@ -2,7 +2,7 @@ import type { Entity, MouseData } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
-import { Instruction, Opcode } from './types';
+import { Instruction, Opcode, SchedulingStrategy } from './types';
 import { CPUIndicator } from './ui/CPU';
 import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
@@ -50,6 +50,7 @@ export class OSEngine {
 	private _mouseDown = false;
 	private _mouseDelta: Point | null = null;
 	private _numIndicators: number = 0;
+	private _schedulingStrategy: SchedulingStrategy = SchedulingStrategy.FIFO;
 
 	private _listeners: { [K in keyof EngineEvents]: EngineEvents[K][] };
 
@@ -71,7 +72,7 @@ export class OSEngine {
 			this.context = ctx;
 			this.renderEngine = new RenderEngine(ctx, canvas);
 
-			for (; this._numIndicators < 4; this._numIndicators++) {
+			for (; this._numIndicators < 2; this._numIndicators++) {
 				const indicator = new CPUIndicator(this._numIndicators);
 
 				this.cpuIndicators.push(indicator);
@@ -205,6 +206,14 @@ export class OSEngine {
 		});
 
 		this.programs.set(name, instructionList);
+	}
+
+	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
+		if (this._schedulingStrategy !== strategy) {
+			this._schedulingStrategy = strategy;
+
+			this.wasmEngine.setSchedulingStrategy(strategy);
+		}
 	}
 
 	private _preloadProgram({ name, file }: ProgramDescriptor): Promise<void> {

@@ -1,3 +1,5 @@
+export const NUM_LEVELS = 6;
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type Ptr<T> = number;
 

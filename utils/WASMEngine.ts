@@ -1,5 +1,5 @@
 import { Memory } from './Memory';
-import { IOEvent, IOInterrupt, Instruction, MachineState, OSState, Process, Ptr, RawMachineState, RawOSState } from './types';
+import { IOEvent, IOInterrupt, Instruction, MachineState, OSState, Process, Ptr, RawMachineState, RawOSState, SchedulingStrategy } from './types';
 
 export interface WASMModule {
 	HEAP8: Int8Array;
@@ -23,6 +23,7 @@ export interface WASMModule {
 		pause(): void;
 		unpause(): void;
 		setClockDelay(delay: number): void;
+		setSchedulingStrategy(strategy: SchedulingStrategy): void;
 	};
 }
 
@@ -56,10 +57,10 @@ export class WASMEngine {
 		const clockDelay = this.memory.readUint32(ptr + 4);
 
 		const availablePtr = this.memory.readUint32(ptr + 8);
-		const available = new Array(4).fill(null).map((_, i) => this.memory.readUint8(availablePtr + i) === 1);
+		const available = new Array(numCores).fill(null).map((_, i) => this.memory.readUint8(availablePtr + i) === 1);
 
 		const runningProcessPtr = this.memory.readUint32(ptr + 12);
-		const runningProcess = new Array(4).fill(null).map((_, i) => this.readProcess(runningProcessPtr + i * 36));
+		const runningProcess = new Array(numCores).fill(null).map((_, i) => this.readProcess(runningProcessPtr + i * 36));
 
 		return {
 			numCores,
@@ -92,12 +93,16 @@ export class WASMEngine {
 		const reenteringListPtr = this.memory.readUint32(ptr + 28);
 		const reentryList = new Array(numReentering).fill(null).map((_, i) => this.readProcess(reenteringListPtr + i * 36));
 
+		const mlfNumReadyPtr = this.memory.readUint32(ptr + 32);
+		const mlfReadyListsPtr = this.memory.readUint32(ptr + 36);
+		// const reentryList = new Array(numReentering).fill(null).map((_, i) => this.readProcess(reenteringListPtr + i * 36));
+
 		const numStepAction = this.getMachineState().numCores;
-		const stepActionPtr = this.memory.readUint32(ptr + 32);
+		const stepActionPtr = this.memory.readUint32(ptr + 40);
 		const stepAction = new Array(numStepAction).fill(null).map((_, i) => this.memory.readUint32(stepActionPtr + i * 4));
 
-		const time = this.memory.readUint32(ptr + 36);
-		const paused = this.memory.readUint8(ptr + 40) === 1;
+		const time = this.memory.readUint32(ptr + 44);
+		const paused = this.memory.readUint8(ptr + 48) === 1;
 
 		return {
 			processList,
@@ -120,6 +125,10 @@ export class WASMEngine {
 
 	public setClockDelay(delay: number): void {
 		this.module.asm.setClockDelay(delay);
+	}
+
+	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
+		this.module.asm.setSchedulingStrategy(strategy);
 	}
 
 	private readString(ptr: Ptr<string>): string {

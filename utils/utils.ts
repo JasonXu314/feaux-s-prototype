@@ -1,4 +1,4 @@
-import { ProcessState } from './types';
+import { ProcessState, SchedulingStrategy } from './types';
 
 export function prettyState(state: ProcessState): string {
 	switch (state) {
@@ -10,6 +10,21 @@ export function prettyState(state: ProcessState): string {
 			return 'PROCESSING';
 		case ProcessState.READY:
 			return 'READY';
+		default:
+			return 'whoops...';
+	}
+}
+
+export function prettyStrategy(strategy: SchedulingStrategy): string {
+	switch (strategy) {
+		case SchedulingStrategy.FIFO:
+			return 'First In First Out';
+		case SchedulingStrategy.SJF:
+			return 'Shortest Job First';
+		case SchedulingStrategy.SRT:
+			return 'Shortest Remaining Time';
+		case SchedulingStrategy.MLF:
+			return 'Multi-Level Feedback';
 		default:
 			return 'whoops...';
 	}

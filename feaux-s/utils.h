@@ -91,6 +91,8 @@ struct OSStateCompat {
 	ProcessCompat* readyList;
 	uint numReentering;
 	ProcessCompat* reentryList;
+	uint* mlfNumReady;
+	ProcessCompat* mlfReadyLists[NUM_LEVELS] = {nullptr};
 	StepAction* stepAction;
 	uint time;
 	bool paused;
