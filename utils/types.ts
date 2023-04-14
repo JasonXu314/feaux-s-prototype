@@ -17,6 +17,13 @@ export enum StepAction {
 	COMPLETE
 }
 
+export enum SchedulingStrategy {
+	FIFO,
+	SJF,
+	SRT,
+	MLF
+}
+
 export enum Opcode {
 	NOP,
 	WORK,

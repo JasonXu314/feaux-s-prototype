@@ -64,7 +64,7 @@ const Index: NextPage = () => {
 					}}
 				/>
 				<div className="p-inputgroup">
-					<Button label="Spawn" onClick={() => osEngine?.spawn(selectedProgram)} />
+					<Button label="Run" onClick={() => osEngine?.spawn(selectedProgram)} />
 					<Dropdown value={selectedProgram} onChange={(evt) => setSelectedProgram(evt.value)} options={availablePrograms} />
 				</div>
 				<Button label="Create&nbsp;Program" icon="pi pi-plus" className="flex-none" onClick={() => setWritingProgram(!writingProgram)} />

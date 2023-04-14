@@ -16,7 +16,7 @@ export class ReadyListIndicator extends Entity {
 		this.width = WIDTH;
 
 		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'Ready List', { fontSize: 24 });
-		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
+		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		if (readyList.length > 0) {
 			readyList.forEach((process, i) => this._renderProcess(renderEngine, process, center.add(new Point(0, HEIGHT / 2 - (i * 100 + 50)))));

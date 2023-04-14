@@ -1,4 +1,4 @@
-import { Entity } from '../Entity';
+import { Entity, Metadata } from '../Entity';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process, ProcessState } from '../types';
@@ -9,17 +9,21 @@ export class ProcessListIndicator extends Entity {
 	private height: number = 0;
 	private width: number = 0;
 
-	public render(renderEngine: RenderEngine, processList: Process[]): void {
+	public render(renderEngine: RenderEngine, processList: Process[], metadata: Metadata): void {
 		const { center, HEIGHT, WIDTH } = this._calculateDims(renderEngine, processList.length);
 		this.center = center;
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
 		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'All Processes', { fontSize: 24 });
-		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
+		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		if (processList.length > 0) {
-			processList.forEach((process, i) => this._renderProcess(renderEngine, process, center.add(new Point(0, HEIGHT / 2 - (i * 50 + 25)))));
+			processList.forEach((process, i) => {
+				const processPos = center.add(new Point(0, HEIGHT / 2 - (i * 50 + 25)));
+
+				this._renderProcess(renderEngine, process, processPos, metadata.selected && this._processSelectedBy(metadata.mouse!.position!, processPos));
+			});
 		} else {
 			renderEngine.text(center.add(new Point(0, -5)), 'Empty', { fontSize: 32 });
 		}
@@ -34,8 +38,12 @@ export class ProcessListIndicator extends Entity {
 		);
 	}
 
-	public _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point): void {
-		renderEngine.rect(pos, 200, 50, 'black');
+	private _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point, selected: boolean): void {
+		if (selected) {
+			renderEngine.fillRect(pos, 200, 50, '#60b0e0');
+		}
+
+		renderEngine.rect(pos, 199, 49, 'black');
 
 		const nameLabel = `Process: ${proc.name}`;
 		const nameMetrics = renderEngine.measure(nameLabel);
@@ -65,6 +73,10 @@ export class ProcessListIndicator extends Entity {
 			default:
 				throw new Error('Invalid process state');
 		}
+	}
+
+	private _processSelectedBy(point: Point, processPos: Point): boolean {
+		return point.x >= processPos.x - 100 && point.x <= processPos.x + 100 && point.y >= processPos.y - 25 && point.y <= processPos.y + 25;
 	}
 
 	private _calculateDims(renderEngine: RenderEngine, count: number): { center: Point; HEIGHT: number; WIDTH: number } {

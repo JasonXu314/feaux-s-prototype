@@ -25,14 +25,17 @@ uint nextPID = 0;
 OSState* state = nullptr;
 OSStateCompat* exportState = nullptr;
 
-void initOS();
+void initOS(uint numCores, SchedulingStrategy strategy);
+void cleanupOS();
+
+Process* schedule(uint core);
 
 int main() {
 	cout << sizeof(ProcessCompat) << " " << sizeof(StepAction) << " " << sizeof(State) << endl;
 
 	machineState = new MachineState{4, 500, new bool[4]{true, true, true, true}, new Process*[4]};
 
-	initOS();
+	initOS(4, SchedulingStrategy::FIFO);
 
 	// keep running the loop until all processes have been added and have run to completion
 	while (true) {
@@ -62,14 +65,47 @@ int main() {
 			if (machineState->available[core]) {
 				if (!state->interrupts.empty()) {
 					state->stepAction[core] = StepAction::HANDLE_INTERRUPT;	 // handle an interrupt
-				} else if (!state->readyList.empty()) {
-					state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+				} else {
+					switch (state->strategy) {
+						case SchedulingStrategy::FIFO:
+							if (!state->fifoReadyList.empty()) {
+								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+							}
+							break;
+						case SchedulingStrategy::SJF:
+							if (!state->sjfReadyList.empty()) {
+								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+							}
+							break;
+						case SchedulingStrategy::SRT:
+							if (!state->srtReadyList.empty()) {
+								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+							}
+							break;
+						case SchedulingStrategy::MLF:
+							for (int i = 0; i < NUM_LEVELS; i++) {
+								if (!state->mlfLists[i].empty()) {
+									state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+									break;
+								}
+							}
+							break;
+						default:
+							cerr << "Debug: unrecognized scheduling strategy " << state->strategy << endl;
+							break;
+					}
 				}
 			} else {
 				if (runningProcess->processorTime == runningProcess->reqProcessorTime) {
 					state->stepAction[core] = StepAction::COMPLETE;	 // running process is finished
 				} else if (!runningProcess->ioEvents.empty() && runningProcess->ioEvents.front().time == runningProcess->processorTime) {
-					state->stepAction[core] = StepAction::IO_REQUEST;  // running process issued an io request
+					state->stepAction[core] = StepAction::IO_REQUEST;	  // running process issued an io request
+				} else if (state->strategy == SchedulingStrategy::MLF) {  // might need to reschedule if using Multi-level Feedback scheduling
+					for (uint i = 0; i < runningProcess->level; i++) {
+						if (!state->mlfLists[i].empty()) {
+							state->stepAction[core] = StepAction::BEGIN_RUN;
+						}
+					}
 				} else {
 					state->stepAction[core] = StepAction::CONTINUE_RUN;	 // runnning process is still running
 				}
@@ -101,22 +137,32 @@ int main() {
 					}
 					break;
 				case StepAction::BEGIN_RUN:
-					if (!state->readyList.empty()) {
-						runningProcess = state->readyList.front();
-						state->readyList.pop();
+					runningProcess = schedule(core);
 
-						runningProcess->state = processing;
-						runningProcess->processorTime++;
-						machineState->available[core] = false;
-						machineState->runningProcess[core] = runningProcess;
-					} else {
+					if (runningProcess == nullptr) {
 						cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
 						return 1;
 					}
+
+					runningProcess->state = processing;
+					runningProcess->processorTime++;
+					machineState->available[core] = false;
+					machineState->runningProcess[core] = runningProcess;
 					break;
 				case StepAction::CONTINUE_RUN:
 					if (runningProcess != nullptr) {
 						runningProcess->processorTime++;
+
+						if (state->strategy == SchedulingStrategy::MLF && runningProcess->level < NUM_LEVELS - 1 &&
+							runningProcess->processorTimeOnLevel >= (0b10 << runningProcess->level)) {
+							runningProcess->state = ready;
+							runningProcess->level++;
+							runningProcess->processorTimeOnLevel = 0;
+							state->mlfLists[runningProcess->level].emplace(runningProcess);
+
+							machineState->available[core] = true;
+							machineState->runningProcess[core] = nullptr;
+						}
 					} else {
 						cerr << "Debug, core " << core << ": trying to run a nonexistent process" << endl;
 						return 1;
@@ -171,7 +217,7 @@ int main() {
 		}
 
 		for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++) {
-			state->readyList.emplace(*it);
+			state->fifoReadyList.emplace(*it);
 		}
 		state->reentryList.clear();
 
@@ -182,12 +228,79 @@ int main() {
 	return 0;
 }
 
-void initOS() {
+void initOS(uint numCores, SchedulingStrategy strategy) {
 	state = new OSState();
 
-	state->stepAction = new StepAction[4];
+	state->stepAction = new StepAction[numCores];
 	state->time = 0;
 	state->ioModule = new IOModule(state->interrupts);
+	state->paused = false;
+	state->time = 0;
+
+	state->strategy = strategy;
+	if (strategy == SchedulingStrategy::MLF) {
+		state->mlfLists = new queue<Process*>[NUM_LEVELS];
+	} else {
+		state->mlfLists = nullptr;
+	}
+}
+
+void cleanupOS() {
+	delete[] state->stepAction;
+	delete state->ioModule;
+	delete state;
+}
+
+Process* schedule(uint core) {
+	switch (state->strategy) {
+		case SchedulingStrategy::FIFO:
+			if (!state->fifoReadyList.empty()) {
+				Process* proc = state->fifoReadyList.front();
+				state->fifoReadyList.pop();
+
+				return proc;
+			}
+			break;
+		case SchedulingStrategy::SJF:
+			if (!state->sjfReadyList.empty()) {
+				Process* proc = state->sjfReadyList.top();
+				state->sjfReadyList.pop();
+
+				return proc;
+			}
+			break;
+		case SchedulingStrategy::SRT:
+			if (!state->srtReadyList.empty()) {
+				Process* proc = state->srtReadyList.top();
+				state->srtReadyList.pop();
+
+				return proc;
+			}
+			break;
+		case SchedulingStrategy::MLF:
+			for (int i = 0; i < NUM_LEVELS; i++) {
+				if (!state->mlfLists[i].empty()) {
+					Process* proc = state->mlfLists[i].front();
+					state->mlfLists[i].pop();
+
+					if (!machineState->available[core]) {
+						Process* runningProcess = machineState->runningProcess[core];
+
+						runningProcess->state = ready;
+						runningProcess->processorTimeOnLevel = 0;
+						state->mlfLists[runningProcess->level].emplace(runningProcess);
+
+						machineState->available[core] = true;
+						machineState->runningProcess[core] = nullptr;
+					}
+
+					return proc;
+				}
+			}
+			break;
+	}
+
+	return nullptr;
 }
 
 uint exported addProcess(Instruction* instructionList, uint size, char* processName) {
@@ -197,6 +310,7 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 	proc->id = ++nextPID;
 	proc->name = processName;
 	proc->arrivalTime = state->time;
+	proc->level = 0;
 
 	for (uint i = 0; i < size; i++) {
 		Instruction& instruction = instructionList[i];
@@ -217,7 +331,23 @@ uint exported addProcess(Instruction* instructionList, uint size, char* processN
 	}
 
 	state->processList.push_back(proc);
-	state->readyList.emplace(proc);
+
+	switch (state->strategy) {
+		case SchedulingStrategy::FIFO:
+			state->fifoReadyList.emplace(proc);
+			break;
+		case SchedulingStrategy::SJF:
+			state->sjfReadyList.emplace(proc);
+			break;
+		case SchedulingStrategy::SRT:
+			state->srtReadyList.emplace(proc);
+			break;
+		case SchedulingStrategy::MLF:
+			state->mlfLists[0].emplace(proc);
+			break;
+		default:
+			return -1;
+	}
 
 	return proc->id;
 }
@@ -282,17 +412,17 @@ OSStateCompat* exported getOSState() {
 		exportState->interrupts = nullptr;	// should be ignored on the other end if there are 0 interrupts, but set it to nullptr anyway for insurance
 	}
 
-	exportState->numReady = state->readyList.size();
+	exportState->numReady = state->fifoReadyList.size();
 	if (exportState->numReady > 0) {
 		i = 0;
 		exportState->readyList = new ProcessCompat[exportState->numReady];
 		for (; i < exportState->numReady; i++) {
-			Process* ptr = state->readyList.front();
+			Process* ptr = state->fifoReadyList.front();
 
 			exportProcess(*ptr, exportState->readyList[i]);
 
-			state->readyList.pop();
-			state->readyList.emplace(ptr);
+			state->fifoReadyList.pop();
+			state->fifoReadyList.emplace(ptr);
 		}
 
 		prevReadyListSize = exportState->numReady;

@@ -23,8 +23,8 @@ export class CPUIndicator extends Entity {
 	public render(renderEngine: RenderEngine, data: CPUData): void {
 		this.center = this._calculateCenter(renderEngine);
 
+		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? 'green' : 'red');
-		renderEngine.rect(this.center, WIDTH, HEIGHT, 'black');
 
 		const label = `Core ${this.core}`;
 		const metrics = renderEngine.measure(label);

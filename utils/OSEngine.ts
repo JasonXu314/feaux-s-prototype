@@ -1,4 +1,4 @@
-import type { Entity } from './Entity';
+import type { Entity, MouseData } from './Entity';
 import { Point } from './Point';
 import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
@@ -78,6 +78,7 @@ export class OSEngine {
 				this.entities.push(indicator);
 			}
 			this.entities.push(this.readyListIndicator);
+			this.entities.push(this.processListIndicator);
 
 			this._listeners = { entityClicked: [], click: [], entityDblClicked: [], finishLoad: [] };
 
@@ -186,7 +187,10 @@ export class OSEngine {
 		);
 
 		this.readyListIndicator.render(this.renderEngine, osState.readyList);
-		this.processListIndicator.render(this.renderEngine, osState.processList);
+		this.processListIndicator.render(this.renderEngine, osState.processList, {
+			selected: this._selectedEntity === this.processListIndicator,
+			mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData
+		});
 
 		if (this._mouseDelta) {
 			this._mouseDelta = new Point();

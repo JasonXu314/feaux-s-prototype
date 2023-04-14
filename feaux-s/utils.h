@@ -10,6 +10,7 @@
 #include "process.h"
 
 #define exported EMSCRIPTEN_KEEPALIVE
+#define NUM_LEVELS 6
 typedef unsigned int uint;
 
 struct Process;
@@ -54,14 +55,30 @@ struct MachineStateCompat {
 
 enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, IO_REQUEST, COMPLETE };
 
+enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
+
+class SJFComparator {
+public:
+	bool operator()(Process* a, Process* b) { return a->reqProcessorTime > b->reqProcessorTime; }
+};
+
+class SRTComparator {
+public:
+	bool operator()(Process* a, Process* b) { return (a->reqProcessorTime - a->processorTime) > (b->reqProcessorTime - b->processorTime); }
+};
+
 struct OSState {
 	std::list<Process*> processList;
 	std::list<IOInterrupt> interrupts;
-	std::queue<Process*> readyList;
+	std::queue<Process*> fifoReadyList;
+	std::priority_queue<Process*, std::vector<Process*>, SJFComparator> sjfReadyList;
+	std::priority_queue<Process*, std::vector<Process*>, SRTComparator> srtReadyList;
+	std::queue<Process*>* mlfLists;
 	std::list<Process*> reentryList;
 	StepAction* stepAction;
 	uint time;
 	bool paused;
+	SchedulingStrategy strategy;
 	IOModule* ioModule;
 };
 

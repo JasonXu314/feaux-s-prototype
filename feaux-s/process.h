@@ -38,7 +38,7 @@ struct IOEvent {
 enum State { ready, processing, blocked, done };  // Used to track the process states
 
 struct Process {
-	Process() : id(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready) {}
+	Process() : id(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
 
 	unsigned int id;  // The process ID, assigned when the process is admitted to the system
 	string name;
@@ -47,6 +47,8 @@ struct Process {
 	long doneTime;			// Convenience variable, use this to keep track of when a process completes
 	long reqProcessorTime;	// Total amount of processor time needed
 	long processorTime;		// Amount of processor given to this process
+	uint level;
+	long processorTimeOnLevel;
 
 	State state;  // State of the process
 
