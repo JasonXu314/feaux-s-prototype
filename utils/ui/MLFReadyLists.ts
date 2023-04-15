@@ -9,20 +9,28 @@ export class MLFReadyListsIndicator extends Entity {
 	private height: number = 0;
 	private width: number = 0;
 
-	public render(renderEngine: RenderEngine, readyList: Process[]): void {
-		const { center, HEIGHT, WIDTH } = this._calculateDims(renderEngine, readyList.length);
+	public render(renderEngine: RenderEngine, readyLists: Process[][]): void {
+		const { center, HEIGHT, WIDTH } = this._calculateDims(
+			renderEngine,
+			readyLists.reduce((max, list) => (list.length > max ? list.length : max), 0)
+		);
 		this.center = center;
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
-		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'Ready List', { fontSize: 24 });
+		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 45)), 'MLF Lists', { fontSize: 24 });
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
-		if (readyList.length > 0) {
-			readyList.forEach((process, i) => this._renderProcess(renderEngine, process, center.add(new Point(0, HEIGHT / 2 - (i * 100 + 50)))));
-		} else {
-			renderEngine.text(center.add(new Point(0, -5)), 'Empty', { fontSize: 32 });
-		}
+		readyLists.forEach((readyList, i) => {
+			const xOFfset = -WIDTH / 2 + i * 200 + 100;
+
+			renderEngine.text(center.add(new Point(xOFfset, HEIGHT / 2 + 20)), `Priority ${6 - i}`, { fontSize: 18 });
+			if (readyList.length > 0) {
+				readyList.forEach((process, j) => this._renderProcess(renderEngine, process, center.add(new Point(xOFfset, HEIGHT / 2 - (j * 100 + 50)))));
+			} else {
+				renderEngine.text(center.add(new Point(xOFfset, -5)), 'Empty', { fontSize: 32 });
+			}
+		});
 	}
 
 	public selectedBy(point: Point): boolean {
@@ -35,21 +43,21 @@ export class MLFReadyListsIndicator extends Entity {
 	}
 
 	public _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point): void {
-		renderEngine.rect(pos, 300, 100, 'black');
+		renderEngine.rect(pos, 199, 99, 'black');
 
 		const nameLabel = `Process: ${proc.name}`;
 		const nameMetrics = renderEngine.measure(nameLabel);
-		renderEngine.text(pos.add(new Point(-150 + nameMetrics.width / 2 + 5, 50 - height(nameMetrics) / 2 - 5)), nameLabel);
+		renderEngine.text(pos.add(new Point(-100 + nameMetrics.width / 2 + 5, 50 - height(nameMetrics) / 2 - 5)), nameLabel);
 
 		const pidLabel = `PID: ${proc.id}`;
 		const pidMetrics = renderEngine.measure(pidLabel);
-		renderEngine.text(pos.add(new Point(-150 + pidMetrics.width / 2 + 5, 35 - height(nameMetrics) / 2 - 5)), pidLabel);
+		renderEngine.text(pos.add(new Point(-100 + pidMetrics.width / 2 + 5, 35 - height(nameMetrics) / 2 - 5)), pidLabel);
 
 		const progressLabel = 'Progress:';
 		const progressMetrics = renderEngine.measure(progressLabel);
-		renderEngine.text(pos.add(new Point(-150 + pidMetrics.width / 2 + 35, -height(progressMetrics) / 2)), progressLabel);
+		renderEngine.text(pos.add(new Point(-100 + pidMetrics.width / 2 + 35, -height(progressMetrics) / 2)), progressLabel);
 
-		const progressBarWidth = 250;
+		const progressBarWidth = 160;
 		const yOffset = -20;
 		const progressWidth = progressBarWidth * (proc.processorTime / proc.reqProcessorTime);
 
@@ -57,14 +65,14 @@ export class MLFReadyListsIndicator extends Entity {
 		renderEngine.rect(pos.add(new Point(5, yOffset)), progressBarWidth, 15, 'black');
 	}
 
-	private _calculateDims(renderEngine: RenderEngine, count: number): { center: Point; HEIGHT: number; WIDTH: number } {
-		const WIDTH = 300,
-			HEIGHT = Math.max(count * 100, 100);
+	private _calculateDims(renderEngine: RenderEngine, maxCount: number): { center: Point; HEIGHT: number; WIDTH: number } {
+		const WIDTH = 1200,
+			HEIGHT = Math.max(maxCount * 100, 100);
 
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
+			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 75))
 		};
 	}
 }

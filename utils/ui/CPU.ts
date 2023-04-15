@@ -9,7 +9,7 @@ interface CPUData {
 	process: Process | null;
 }
 
-const WIDTH = 600,
+const WIDTH = 315,
 	HEIGHT = 150,
 	MARGIN = 25;
 

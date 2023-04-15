@@ -4,6 +4,8 @@ import { RenderEngine } from '../RenderEngine';
 import { Process, ProcessState } from '../types';
 import { STATUS_COLORS, height, prettyState } from '../utils';
 
+const WIDTH = 180;
+
 export class ProcessListIndicator extends Entity {
 	private center: Point = new Point();
 	private height: number = 0;
@@ -40,35 +42,35 @@ export class ProcessListIndicator extends Entity {
 
 	private _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point, selected: boolean): void {
 		if (selected) {
-			renderEngine.fillRect(pos, 200, 50, 'rgba(80, 144, 224, 0.5)');
+			renderEngine.fillRect(pos, WIDTH, 50, 'rgba(80, 144, 224, 0.5)');
 		}
 
-		renderEngine.rect(pos, 199, 49, 'black');
+		renderEngine.rect(pos, WIDTH - 1, 49, 'black');
 
 		const nameLabel = `Process: ${proc.name}`;
 		const nameMetrics = renderEngine.measure(nameLabel);
-		renderEngine.text(pos.add(new Point(-100 + nameMetrics.width / 2 + 15, 25 - height(nameMetrics) / 2 - 5)), nameLabel);
+		renderEngine.text(pos.add(new Point(-90 + nameMetrics.width / 2 + 15, 25 - height(nameMetrics) / 2 - 5)), nameLabel);
 
 		const pidLabel = `PID: ${proc.id}`;
 		const pidMetrics = renderEngine.measure(pidLabel);
-		renderEngine.text(pos.add(new Point(-100 + pidMetrics.width / 2 + 15, 10 - height(nameMetrics) / 2 - 5)), pidLabel);
+		renderEngine.text(pos.add(new Point(-90 + pidMetrics.width / 2 + 15, 10 - height(nameMetrics) / 2 - 5)), pidLabel);
 
 		const statusLabel = `Status: ${prettyState(proc.state)}`;
 		const statusMetrics = renderEngine.measure(statusLabel);
-		renderEngine.text(pos.add(new Point(-100 + statusMetrics.width / 2 + 15, -5 - height(nameMetrics) / 2 - 5)), statusLabel);
+		renderEngine.text(pos.add(new Point(-90 + statusMetrics.width / 2 + 15, -5 - height(nameMetrics) / 2 - 5)), statusLabel);
 
 		switch (proc.state) {
 			case ProcessState.DONE:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.green);
+				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.green);
 				break;
 			case ProcessState.PROCESSING:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.yellow);
+				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.yellow);
 				break;
 			case ProcessState.BLOCKED:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.red);
+				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.red);
 				break;
 			case ProcessState.READY:
-				renderEngine.fillRect(pos.add(new Point(-95, 0)), 10, 50, STATUS_COLORS.blue);
+				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.blue);
 				break;
 			default:
 				throw new Error('Invalid process state');
@@ -80,13 +82,12 @@ export class ProcessListIndicator extends Entity {
 	}
 
 	private _calculateDims(renderEngine: RenderEngine, count: number): { center: Point; HEIGHT: number; WIDTH: number } {
-		const WIDTH = 200,
-			HEIGHT = Math.max(count * 50, 50);
+		const HEIGHT = Math.max(count * 50, 50);
 
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(-renderEngine.width / 2 + 625 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
+			center: new Point(-renderEngine.width / 2 + 340 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
 		};
 	}
 }

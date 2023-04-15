@@ -88,10 +88,20 @@ int main() {
 				} else if (!runningProcess->ioEvents.empty() && runningProcess->ioEvents.front().time == runningProcess->processorTime) {
 					state->stepAction[core] = StepAction::IO_REQUEST;	  // running process issued an io request
 				} else if (state->strategy == SchedulingStrategy::MLF) {  // might need to reschedule if using Multi-level Feedback scheduling
-					for (uint i = 0; i < runningProcess->level; i++) {
-						if (!state->mlfLists[i].empty()) {
-							state->stepAction[core] = StepAction::BEGIN_RUN;
+					bool coreAvailable = false;
+					for (uint i = 0; i < machineState->numCores; i++) {
+						if (machineState->available[i]) {
+							coreAvailable = true;
 							break;
+						}
+					}
+
+					if (!coreAvailable) {
+						for (uint i = 0; i < runningProcess->level; i++) {
+							if (!state->mlfLists[i].empty()) {
+								state->stepAction[core] = StepAction::BEGIN_RUN;
+								break;
+							}
 						}
 					}
 

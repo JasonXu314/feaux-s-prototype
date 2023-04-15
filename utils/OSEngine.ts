@@ -4,6 +4,7 @@ import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
 import { Instruction, Opcode, SchedulingStrategy } from './types';
 import { CPUIndicator } from './ui/CPU';
+import { MLFReadyListsIndicator } from './ui/MLFReadyLists';
 import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
 
@@ -16,7 +17,8 @@ const DEFAULT_PROGRAMS: ProgramDescriptor[] = [
 	{ name: 'Standard Worker', file: 'worker' },
 	{ name: 'IO Worker', file: 'io' },
 	{ name: 'More Work + IO', file: 'more-work' },
-	{ name: 'More IO + Work', file: 'more-io' }
+	{ name: 'More IO + Work', file: 'more-io' },
+	{ name: 'Very Long Worker', file: 'very-long' }
 ];
 
 interface EngineEvents {
@@ -42,6 +44,7 @@ export class OSEngine {
 
 	private readonly cpuIndicators: CPUIndicator[] = [];
 	private readonly readyListIndicator: ReadyListIndicator = new ReadyListIndicator();
+	private readonly mlfReadyListsIndicator: MLFReadyListsIndicator = new MLFReadyListsIndicator();
 	private readonly processListIndicator: ProcessListIndicator = new ProcessListIndicator();
 
 	private _nextTick: number = -1;
@@ -188,6 +191,7 @@ export class OSEngine {
 		);
 
 		if (this._schedulingStrategy === SchedulingStrategy.MLF) {
+			this.mlfReadyListsIndicator.render(this.renderEngine, osState.mlfReadyLists);
 		} else {
 			this.readyListIndicator.render(this.renderEngine, osState.readyList);
 		}
