@@ -21,13 +21,15 @@ typedef unsigned int uint;
 enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL, SERVICE_REQUEST };
 enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
 enum State { ready, processing, blocked, done };  // Used to track the process states
-enum Opcode { NOP, WORK, IO, EXIT };
+enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE };
+enum Regs { RAX, RCX, RDX, RBX, RSI, RDI, RSP, RBP, R8, R9, R10, R11, R12, R13, R14, R15 };
 enum InterruptType { IO_COMPLETION };
 enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT };
 
 struct Instruction {
-	uint8_t opcode;
-	uint8_t operand;
+	Opcode opcode;
+	uint operand1;
+	uint operand2;
 };
 
 struct Program {
@@ -52,8 +54,23 @@ struct Registers {
 	// Pointer to next instruction
 	uint rip;
 
-	// Argument registers
+	// GPRs
+	uint rax;
+	uint rcx;
+	uint rdx;
+	uint rbx;
+	uint rsi;
 	uint rdi;
+	uint rsp;
+	uint rbp;
+	uint r8;
+	uint r9;
+	uint r10;
+	uint r11;
+	uint r12;
+	uint r13;
+	uint r14;
+	uint r15;
 };
 
 struct IORequest {

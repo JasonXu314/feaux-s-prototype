@@ -1,5 +1,5 @@
 import { View } from './OSEngine';
-import { ProcessState, SchedulingStrategy } from './types';
+import { ProcessState, Regs, SchedulingStrategy } from './types';
 
 // colors pulled from astro design (https://www.astrouxds.com/patterns/status-system/)
 export const STATUS_COLORS = {
@@ -47,6 +47,45 @@ export function prettyView(view: View): string {
 			return 'Process View';
 		default:
 			return 'whoops...';
+	}
+}
+
+export function getRegister(reg: string): Regs {
+	switch (reg) {
+		case 'rax':
+			return Regs.RAX;
+		case 'rcx':
+			return Regs.RCX;
+		case 'rdx':
+			return Regs.RDX;
+		case 'rbx':
+			return Regs.RBX;
+		case 'rsi':
+			return Regs.RSI;
+		case 'rdi':
+			return Regs.RDI;
+		case 'rsp':
+			return Regs.RSP;
+		case 'rbp':
+			return Regs.RBP;
+		case 'r8':
+			return Regs.R8;
+		case 'r9':
+			return Regs.R9;
+		case 'r10':
+			return Regs.R10;
+		case 'r11':
+			return Regs.R11;
+		case 'r12':
+			return Regs.R12;
+		case 'r13':
+			return Regs.R13;
+		case 'r14':
+			return Regs.R14;
+		case 'r15':
+			return Regs.R15;
+		default:
+			throw new Error(`Unrecognized register mnemonic ${reg}`);
 	}
 }
 

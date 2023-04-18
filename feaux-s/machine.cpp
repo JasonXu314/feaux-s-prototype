@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "os.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -29,8 +30,18 @@ void CPU::tick() {
 				break;
 			case Opcode::IO:
 				state->pendingSyscalls[_id] = Syscall::SYS_IO;
-				_registers.rdi = _instruction->operand;
+				_registers.rdi = _instruction->operand1;
 				break;
+			case Opcode::LOAD: {
+				uint* dest = getRegister(_registers, (Regs)_instruction->operand2);
+				*dest = _instruction->operand1;
+				break;
+			}
+			case Opcode::MOVE: {
+				uint *dest = getRegister(_registers, (Regs)_instruction->operand2), *src = getRegister(_registers, (Regs)_instruction->operand1);
+				*dest = *src;
+				break;
+			}
 			case Opcode::EXIT:
 				state->pendingSyscalls[_id] = Syscall::SYS_EXIT;
 				break;

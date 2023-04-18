@@ -42,8 +42,9 @@ export class WASMEngine {
 	public loadProgram(instructionList: Instruction[], name: string): void {
 		const ilPtr = this.module.asm.allocInstructionList(instructionList.length);
 		instructionList.forEach((instruction, i) => {
-			this.memory.writeUint8(ilPtr + i * 2, instruction.opcode);
-			this.memory.writeUint8(ilPtr + i * 2 + 1, instruction.operand);
+			this.memory.writeUint32(ilPtr + i * 12, instruction.opcode);
+			this.memory.writeUint32(ilPtr + i * 12 + 4, instruction.operand1);
+			this.memory.writeUint32(ilPtr + i * 12 + 8, instruction.operand2);
 		});
 
 		const strPtr = this.module.asm.allocString(name.length);

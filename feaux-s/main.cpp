@@ -17,6 +17,11 @@ EM_JS(void, jssleep, (int milis), { Asyncify.handleSleep(wakeUp => { setTimeout(
 #define PRINT_SIZE(type) cout << #type ": " << sizeof(type) << endl
 
 int main() {
+	PRINT_SIZE(Instruction);
+	PRINT_SIZE(Registers);
+	PRINT_SIZE(OSStateCompat);
+	PRINT_SIZE(ProcessCompat);
+
 	initMachine(2, 1);
 	initOS(machine->numCores, SchedulingStrategy::FIFO);
 

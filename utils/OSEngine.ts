@@ -9,7 +9,7 @@ import { MLFReadyListsIndicator } from './ui/MLFReadyLists';
 import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
 import { Tab } from './ui/Tab';
-import { prettyView } from './utils';
+import { getRegister, prettyView } from './utils';
 
 export interface ProgramDescriptor {
 	name: string;
@@ -223,6 +223,7 @@ export class OSEngine {
 
 		const machineState = this.wasmEngine.getMachineState();
 		const osState = this.wasmEngine.getOSState();
+		// console.log(machineState, osState);
 		this.tabs.forEach((tab, i) => tab.render(this.renderEngine, this._selectedEntity === tab, this._currentView === i));
 		this.renderEngine.rect(new Point(0, -12), this.renderEngine.width - 51, this.renderEngine.height - 51, 'black');
 
@@ -257,13 +258,13 @@ export class OSEngine {
 
 	public compileProgram(name: string, code: string): void {
 		const instructionList = code.split('\n').reduce<Instruction[]>((instructions, line) => {
-			const [mnemonic, operand] = line.split(' ');
+			const [mnemonic, operand1, operand2] = line.split(' ');
 
-			return [...instructions, ...this._compile(mnemonic, operand)];
+			return [...instructions, ...this._compile(mnemonic, operand1, operand2)];
 		}, []);
 
 		if (instructionList.at(-1)?.opcode !== Opcode.EXIT) {
-			instructionList.push({ opcode: Opcode.EXIT, operand: -1 });
+			instructionList.push({ opcode: Opcode.EXIT, operand1: -1, operand2: -1 });
 		}
 
 		this.programs.set(name, instructionList);
@@ -285,17 +286,21 @@ export class OSEngine {
 			.catch((err) => console.error(`Error loading default program ${name}`, err));
 	}
 
-	private _compile(mnemonic: string, operand: string): Instruction[] {
+	private _compile(mnemonic: string, operand1: string, operand2: string): Instruction[] {
 		switch (mnemonic) {
 			case 'nop':
-				return [{ opcode: Opcode.NOP, operand: -1 }];
+				return [{ opcode: Opcode.NOP, operand1: -1, operand2: -1 }];
 			case 'work':
-				const amount = parseInt(operand);
-				return new Array(amount).fill({ opcode: Opcode.WORK, operand: -1 });
+				const amount = parseInt(operand1);
+				return new Array(amount).fill({ opcode: Opcode.WORK, operand1: -1, operand2: -1 });
 			case 'io':
-				return [{ opcode: Opcode.IO, operand: parseInt(operand) }];
+				return [{ opcode: Opcode.IO, operand1: parseInt(operand1), operand2: -1 }];
+			case 'ldi':
+				return [{ opcode: Opcode.LOAD, operand1: parseInt(operand1), operand2: getRegister(operand2) }];
+			case 'mov':
+				return [{ opcode: Opcode.MOVE, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
 			case 'exit':
-				return [{ opcode: Opcode.EXIT, operand: -1 }];
+				return [{ opcode: Opcode.EXIT, operand1: -1, operand2: -1 }];
 			default:
 				throw new Error(`Unrecognized mnemonic ${mnemonic}`);
 		}

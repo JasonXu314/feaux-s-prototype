@@ -21,4 +21,6 @@ void exportIODevice(const IODevice& src, DeviceState& dest);
 
 void exportInterrupt(const Interrupt& src, InterruptCompat& dest);
 
+uint* getRegister(Registers& regs, Regs reg);
+
 #endif

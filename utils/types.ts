@@ -30,7 +30,9 @@ export enum Opcode {
 	NOP,
 	WORK,
 	IO,
-	EXIT
+	EXIT,
+	LOAD,
+	MOVE
 }
 
 export enum InterruptType {
@@ -41,6 +43,25 @@ export enum Syscall {
 	SYS_NONE,
 	SYS_IO,
 	SYS_EXIT
+}
+
+export enum Regs {
+	RAX,
+	RCX,
+	RDX,
+	RBX,
+	RSI,
+	RDI,
+	RSP,
+	RBP,
+	R8,
+	R9,
+	R10,
+	R11,
+	R12,
+	R13,
+	R14,
+	R15
 }
 
 export type IOInterrupt = {
@@ -55,12 +76,48 @@ export type IORequest = {
 
 export type Instruction = {
 	opcode: Opcode;
-	operand: number;
+	operand1: number;
+	operand2: number;
 };
 
 export type Registers = {
 	rip: number;
+	rax: number;
+	rcx: number;
+	rdx: number;
+	rbx: number;
+	rsi: number;
 	rdi: number;
+	rsp: number;
+	rbp: number;
+	r8: number;
+	r9: number;
+	r10: number;
+	r11: number;
+	r12: number;
+	r13: number;
+	r14: number;
+	r15: number;
+};
+
+export const DEF_REGSTATE = {
+	rip: -1,
+	rax: -1,
+	rcx: -1,
+	rdx: -1,
+	rbx: -1,
+	rsi: -1,
+	rdi: -1,
+	rsp: -1,
+	rbp: -1,
+	r8: -1,
+	r9: -1,
+	r10: -1,
+	r11: -1,
+	r12: -1,
+	r13: -1,
+	r14: -1,
+	r15: -1
 };
 
 export type Process = {

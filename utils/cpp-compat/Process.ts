@@ -1,9 +1,9 @@
 import { Memory } from '../Memory';
-import { ProcessState, Registers } from '../types';
+import { DEF_REGSTATE, ProcessState, Registers } from '../types';
 import { Registers as Regs } from './Registers';
 
 export class Process {
-	public static readonly SIZE = 44;
+	public static readonly SIZE = 36 + Regs.SIZE;
 
 	private _pid: number = -1;
 	private _name: string = '';
@@ -14,7 +14,7 @@ export class Process {
 	private _level: number = -1;
 	private _processorTimeOnLevel: number = -1;
 	private _state: ProcessState = ProcessState.READY;
-	private _registers: Registers = { rip: 0, rdi: 0 };
+	private _registers: Registers = DEF_REGSTATE;
 
 	private constructor() {}
 

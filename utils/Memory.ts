@@ -17,6 +17,10 @@ export class Memory {
 		return this.dv.getUint32(offset, true);
 	}
 
+	public writeUint32(offset: number, value: number): void {
+		this.dv.setUint32(offset, value, true);
+	}
+
 	public readInt32(offset: number): number {
 		return this.dv.getInt32(offset, true);
 	}

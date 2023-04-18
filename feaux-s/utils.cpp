@@ -38,3 +38,43 @@ void exportInterrupt(const Interrupt& src, InterruptCompat& dest) {
 			break;
 	}
 }
+
+uint* getRegister(Registers& regs, Regs reg) {
+	switch (reg) {
+		case Regs::RAX:
+			return &regs.rax;
+		case Regs::RCX:
+			return &regs.rcx;
+		case Regs::RDX:
+			return &regs.rdx;
+		case Regs::RBX:
+			return &regs.rbx;
+		case Regs::RSI:
+			return &regs.rsi;
+		case Regs::RDI:
+			return &regs.rdi;
+		case Regs::RSP:
+			return &regs.rsp;
+		case Regs::RBP:
+			return &regs.rbp;
+		case Regs::R8:
+			return &regs.r8;
+		case Regs::R9:
+			return &regs.r9;
+		case Regs::R10:
+			return &regs.r10;
+		case Regs::R11:
+			return &regs.r11;
+		case Regs::R12:
+			return &regs.r12;
+		case Regs::R13:
+			return &regs.r13;
+		case Regs::R14:
+			return &regs.r14;
+		case Regs::R15:
+			return &regs.r15;
+		deafult:
+			cerr << "Unknown register " << reg << endl;
+			break;
+	}
+}
