@@ -18,102 +18,130 @@ class IODevice;
 #define NUM_LEVELS 6
 typedef unsigned int uint;
 
+// The OS action at the current step of the simulation
 enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL, SERVICE_REQUEST };
+// The scheduling strategies
+// FIFO = First In, First Out
+// SJF = Shortest Job First
+// SRT = Shortest Remaining Time
+// MLF = Multi-Level Feedback
 enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
-enum State { ready, processing, blocked, done };  // Used to track the process states
+// The states a process can be in
+enum State { ready, processing, blocked, done };
+// The opcodes for CPU instructions
 enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE };
+// The available x86-64 registers (yes i know in my imiplementation they're 32-bit, not 64-bit,
+// but WASM interacts weirdly with unsigned long longs for some reason)
 enum Regs { RAX, RCX, RDX, RBX, RSI, RDI, RSP, RBP, R8, R9, R10, R11, R12, R13, R14, R15 };
+// The types of interrupt that can occur
 enum InterruptType { IO_COMPLETION };
+// The syscalls available to processes
 enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT };
 
+// A CPU instruction
 struct Instruction {
 	Opcode opcode;
 	uint operand1;
 	uint operand2;
 };
 
+// A program that is recognized by the OS
 struct Program {
+	// Makes a "blank" program
 	Program() : name(""), length(0), instructions(nullptr) {}
+	// Constructs a program from the given data
 	Program(const std::string& name, uint length, Instruction* instructions) : name(name), length(length), instructions(instructions) {}
+	// Copies another program
 	Program(const Program& other) : name(other.name), length(other.length), instructions(new Instruction[other.length]) {
 		for (uint i = 0; i < length; i++) {
 			instructions[i] = other.instructions[i];
 		}
 	}
 
+	// The name of the program (will be shared by processes executing this program's instructions)
 	std::string name;
+	// The size of the program
 	uint length;
 	Instruction* instructions;
 
+	// Necessary to store programs in a map (i think, actually maybe not but im not going to remove it because :P)
 	bool operator<(const Program& other) { return name < other.name; }
 
+	// Free a program
 	~Program() { delete[] instructions; }
 };
 
+// The current register state (of a process or CPU)
 struct Registers {
 	// Pointer to next instruction
-	uint rip;
+	uint rip;  // Instruction pointer
 
 	// GPRs
-	uint rax;
-	uint rcx;
-	uint rdx;
-	uint rbx;
-	uint rsi;
-	uint rdi;
-	uint rsp;
-	uint rbp;
-	uint r8;
-	uint r9;
-	uint r10;
-	uint r11;
-	uint r12;
-	uint r13;
-	uint r14;
-	uint r15;
+	uint rax;  // %rax
+	uint rcx;  // %rcx
+	uint rdx;  // %rdx
+	uint rbx;  // %rbx
+	uint rsi;  // %rsi
+	uint rdi;  // %rdi
+	uint rsp;  // %rsp
+	uint rbp;  // %rbp
+	uint r8;   // %r8
+	uint r9;   // %r9
+	uint r10;  // %r10
+	uint r11;  // %r11
+	uint r12;  // %r12
+	uint r13;  // %r13
+	uint r14;  // %r14
+	uint r15;  // %r15
 };
 
+// An I/O request made by a process
 struct IORequest {
 	uint pid;
 	uint duration;
 };
 
+// The current state of the simulation machine
 struct MachineState {
 	uint8_t numCores;
 	uint8_t numIODevices;
 	uint clockDelay;
-	CPU** cores;
-	IODevice** ioDevices;
+	CPU** cores;		   // note: these are not 2-d arrays, just arrays of pointers (so that i can use nullptr)
+	IODevice** ioDevices;  // note: these are not 2-d arrays, just arrays of pointers (so that i can use nullptr)
 };
 
+// A class for the SJF (Shortest Job First) priority queue to be able to compare 2 processes
 class SJFComparator {
 public:
 	bool operator()(PCB* a, PCB* b);
 };
 
+// A class for the SRT (Shortest Remaining Time) priority queue to be able to compare 2 processes
 class SRTComparator {
 public:
 	bool operator()(PCB* a, PCB* b);
 };
 
+// The data kept track of by the OS
 struct OSState {
-	std::list<PCB*> processList;
-	std::list<Interrupt*> interrupts;
-	std::queue<PCB*> fifoReadyList;
-	std::priority_queue<PCB*, std::vector<PCB*>, SJFComparator> sjfReadyList;
-	std::priority_queue<PCB*, std::vector<PCB*>, SRTComparator> srtReadyList;
-	std::queue<PCB*>* mlfLists;
-	std::list<PCB*> reentryList;
-	std::queue<IORequest> pendingRequests;
-	StepAction* stepAction;
-	Syscall* pendingSyscalls;
-	PCB** runningProcess;
+	std::list<PCB*> processList;											   // A list of all the processes that have/are/will execute
+	std::list<Interrupt*> interrupts;										   // A list of the interrupts that the OS has yet to handle
+	std::queue<PCB*> fifoReadyList;											   // The ready list for the FIFO scheduling algorithm
+	std::priority_queue<PCB*, std::vector<PCB*>, SJFComparator> sjfReadyList;  // The ready list for the SJF scheduling algorithm
+	std::priority_queue<PCB*, std::vector<PCB*>, SRTComparator> srtReadyList;  // The ready list for the SRT scheduling algorithm
+	std::queue<PCB*>* mlfLists;												   // The ready lists for the MLF scheduling algorithm (will always be 6 long)
+	std::list<PCB*> reentryList;											   // The list of processes that, on this cycle, had I/O operations complete
+	std::queue<IORequest> pendingRequests;	// The pending I/O requests (raised by a process, but all I/O Devices were busy)
+	StepAction* stepAction;					// The current action for each core at this step of the simulation
+	Syscall* pendingSyscalls;				// The pending syscalls for each core
+	PCB** runningProcess;					// The currently running process for each core
 	uint time;
 	bool paused;
 	SchedulingStrategy strategy;
-	std::map<std::string, Program> programs;
+	std::map<std::string, Program> programs;  // The set of all programs known to the OS
 };
 
+// Some declarations for global state
 extern MachineState* machine;
 extern OSState* state;
 extern uint nextPID;

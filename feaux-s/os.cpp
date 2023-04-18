@@ -73,15 +73,18 @@ PCB* schedule(uint core) {
 					PCB* proc = state->mlfLists[i].front();
 					state->mlfLists[i].pop();
 
-					if (!machine->cores[core]->free()) {
-						PCB* runningProcess = state->runningProcess[core];
+					if (!machine->cores[core]->free()) {  // If the selected core is currently running a process (the case where a new process arrived and
+														  // pre-empts the currently running process of a core)
+						PCB* runningProcess = state->runningProcess[core];	// The currently running process
 
+						// Reset the states
 						runningProcess->state = ready;
 						runningProcess->processorTimeOnLevel = 0;
+						runningProcess->regstate = machine->cores[core]->regstate();  // save the CPU registers
 						state->mlfLists[runningProcess->level].emplace(runningProcess);
 
+						// Reset the CPU
 						state->runningProcess[core] = nullptr;
-						runningProcess->regstate = machine->cores[core]->regstate();
 						Registers noop{0};
 						machine->cores[core]->load(noop);
 					}

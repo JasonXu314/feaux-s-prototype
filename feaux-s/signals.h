@@ -3,6 +3,7 @@
 
 #include "decls.h"
 
+// A general interrupt
 class Interrupt {
 public:
 	Interrupt(InterruptType type) : _type(type) {}
@@ -13,10 +14,12 @@ protected:
 	InterruptType _type;
 };
 
+// An I/O Interrupt (signals completion of an I/O operation)
 class IOInterrupt : public Interrupt {
 public:
 	IOInterrupt(uint pid) : Interrupt(InterruptType::IO_COMPLETION), _pid(pid) {}
 
+	// Gets the PID of the process for which the I/O operation completed
 	uint pid() const { return _pid; }
 
 private:

@@ -11,11 +11,13 @@
 #include "utils.h"
 
 // clang-format off
+// A sleep function that is non-blocking
 EM_JS(void, jssleep, (int milis), { Asyncify.handleSleep(wakeUp => { setTimeout(wakeUp, milis); }); });
 // clang-format on
 
 #define PRINT_SIZE(type) cout << #type ": " << sizeof(type) << endl
 
+// The kernel of our "OS"
 int main() {
 	PRINT_SIZE(Instruction);
 	PRINT_SIZE(Registers);
@@ -25,33 +27,25 @@ int main() {
 	initMachine(2, 1);
 	initOS(machine->numCores, SchedulingStrategy::FIFO);
 
-	// keep running the loop until all processes have been added and have run to completion
 	while (true) {
 		if (state->paused) {
-			goto skip;
+			goto skip;	// Skip all the normal operations of the OS and just do a NOOP this tick
 		}
 
 		// Update our current time step
 		state->time++;
 
+		// Tick the CPUs and I/O devices
 		for (uint8_t i = 0; i < machine->numCores; i++) machine->cores[i]->tick();
 		for (uint8_t i = 0; i < machine->numIODevices; i++) machine->ioDevices[i]->tick();
 
-		// If the processor is tied up running a process, then continue running it until it is done or blocks
-		//    note: be sure to check for things that should happen as the process continues to run (io, completion...)
-		// If the processor is free then you can choose the appropriate action to take, the choices (in order of precedence) are:
-		//  - admit a new process if one is ready (i.e., take a 'newArrival' process and put them in the 'ready' state)
-		//  - address an interrupt if there are any pending (i.e., update the state of a blocked process whose IO operation is complete)
-		//  - start processing a ready process if there are any ready
+		for (uint core = 0; core < machine->numCores; core++) {	 // For each core in our simulated device
+			PCB* runningProcess = state->runningProcess[core];	 // The currently running process on this core
 
-		// init the stepAction, update below
-		for (uint core = 0; core < machine->numCores; core++) {
-			PCB* runningProcess = state->runningProcess[core];
+			state->stepAction[core] = StepAction::NOOP;	 // Initialize action to NOOP, update later
 
-			state->stepAction[core] = StepAction::NOOP;
-
-			if (machine->cores[core]->free()) {
-				if (!state->pendingRequests.empty()) {
+			if (machine->cores[core]->free()) {			// If the core isn't running anything atm
+				if (!state->pendingRequests.empty()) {	// If there was an I/O request issued, but all the I/O devices at the time were busy at the time...
 					bool deviceAvailable = false;
 					for (uint i = 0; i < machine->numIODevices; i++) {
 						if (!machine->ioDevices[i]->busy()) {
@@ -60,12 +54,12 @@ int main() {
 						}
 					}
 
-					if (deviceAvailable) {
+					if (deviceAvailable) {	// If there is now a device available, service that request
 						state->stepAction[core] = StepAction::SERVICE_REQUEST;
 					}
 				}
 
-				if (state->stepAction[core] == StepAction::NOOP) {
+				if (state->stepAction[core] == StepAction::NOOP) {	// If the core is not servicing an I/O request
 					if (!state->interrupts.empty()) {
 						state->stepAction[core] = StepAction::HANDLE_INTERRUPT;	 // handle an interrupt
 					} else {
@@ -99,10 +93,12 @@ int main() {
 						}
 					}
 				}
-			} else {
-				if (state->pendingSyscalls[core] != Syscall::SYS_NONE) {
+			} else {													  // The CPU is currently running a process
+				if (state->pendingSyscalls[core] != Syscall::SYS_NONE) {  // The currently running process issued a syscall
 					state->stepAction[core] = StepAction::HANDLE_SYSCALL;
-				} else if (state->strategy == SchedulingStrategy::MLF) {  // might need to reschedule if using Multi-level Feedback scheduling
+				} else if (state->strategy ==
+						   SchedulingStrategy::MLF) {  // Might need to reschedule if using Multi-level Feedback scheduling (if a process was just spawned)
+					// Check whether there exists an available core
 					bool coreAvailable = false;
 					for (uint i = 0; i < machine->numCores; i++) {
 						if (machine->cores[i]->free()) {
@@ -111,16 +107,17 @@ int main() {
 						}
 					}
 
-					if (!coreAvailable) {
+					if (!coreAvailable) {  // if not, then the new process (if it exists) will pre-empt the process running on this core
 						for (uint i = 0; i < runningProcess->level; i++) {
 							if (!state->mlfLists[i].empty()) {
-								state->stepAction[core] = StepAction::BEGIN_RUN;
+								state->stepAction[core] = StepAction::BEGIN_RUN;  // If a process was found on a higher priority level than the currently
+																				  // running process, then pre-empt the process running on this core
 								break;
 							}
 						}
 					}
 
-					if (state->stepAction[core] != StepAction::BEGIN_RUN) {
+					if (state->stepAction[core] != StepAction::BEGIN_RUN) {	 // If no such process was found, then continue execution
 						state->stepAction[core] = StepAction::CONTINUE_RUN;
 					}
 				} else {
@@ -138,6 +135,7 @@ int main() {
 							case InterruptType::IO_COMPLETION: {
 								IOInterrupt* ioInterrupt = (IOInterrupt*)interrupt;
 
+								// Find the process for whom the I/O operation completed
 								PCB* originProcess = nullptr;
 								for (auto it = state->processList.begin(); it != state->processList.end(); it++) {
 									if ((*it)->pid == ioInterrupt->pid()) {
@@ -159,43 +157,52 @@ int main() {
 								break;
 						}
 
-						delete interrupt;
+						delete interrupt;  // Free the memory allocated for this interrupt (see machine.cpp#IODevice::tick)
 					} else {
 						cerr << "Debug, core " << core << ": trying to handle nonexistent interrupt" << endl;
 						return 1;
 					}
 					break;
-					case StepAction::BEGIN_RUN:
-						runningProcess = schedule(core);
-
-						if (runningProcess == nullptr) {
-							cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
-							return 1;
-						}
-
-						runningProcess->state = processing;
-						state->runningProcess[core] = runningProcess;
-						machine->cores[core]->load(runningProcess->regstate);
-						break;
 				}
+				case StepAction::BEGIN_RUN:
+					runningProcess = schedule(core);  // Pick a process to run
+
+					if (runningProcess == nullptr) {
+						cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
+						return 1;
+					}
+
+					runningProcess->state = processing;					   // Mark the process as running
+					state->runningProcess[core] = runningProcess;		   // Keep track of the process in the OS state
+					machine->cores[core]->load(runningProcess->regstate);  // Load the process's registers into the CPU to execute the program
+					break;
 				case StepAction::CONTINUE_RUN:
 					if (runningProcess != nullptr) {
-						runningProcess->processorTime++;
+						runningProcess->processorTime++;  // Tick the simulation times
 						if (state->strategy == SchedulingStrategy::MLF) {
-							runningProcess->processorTimeOnLevel++;
+							runningProcess->processorTimeOnLevel++;	 // Tick the simulation times
 						}
 
-						if (state->strategy == SchedulingStrategy::MLF && runningProcess->level < NUM_LEVELS - 1 &&
-							runningProcess->processorTimeOnLevel > (0b10 << runningProcess->level)) {
+						if (state->strategy == SchedulingStrategy::MLF								   // If we are using MLF scheduling
+							&& runningProcess->level < NUM_LEVELS - 1								   // If the current process is not on the lowest level
+																									   // (ie. the process does have a level time limit)
+							&& runningProcess->processorTimeOnLevel > (0b10 << runningProcess->level)  // If the process has received the limit of CPU time
+																									   // (0b10 left-shifted by the level is a
+																									   // tricky way of doing 2^level)
+						) {
+							// Reset state
 							runningProcess->state = ready;
 							runningProcess->level++;
 							runningProcess->processorTimeOnLevel = 0;
+
+							// Save register state
+							Registers regstate = machine->cores[core]->regstate();
+							runningProcess->regstate = regstate;
 							state->reentryList.push_back(runningProcess);
 
+							// Clear CPU and running process entry
 							state->runningProcess[core] = nullptr;
-							Registers regstate = machine->cores[core]->regstate();
 							machine->cores[core]->load(NOPROC);
-							runningProcess->regstate = regstate;
 						}
 					} else {
 						cerr << "Debug, core " << core << ": trying to run a nonexistent process" << endl;
@@ -209,6 +216,7 @@ int main() {
 								cerr << "Debug, core " << core << ": handling nonexistent syscall" << endl;
 								return 1;
 							case Syscall::SYS_IO: {
+								// Check whether there is a free I/O device to handle the request
 								int freeDevice = -1;
 								for (int i = 0; i < machine->numIODevices; i++) {
 									if (!machine->ioDevices[i]->busy()) {
@@ -217,18 +225,21 @@ int main() {
 									}
 								}
 
+								// Mark the process as blocked
 								runningProcess->state = blocked;
-								if (freeDevice == -1) {
-									runningProcess->regstate = machine->cores[core]->regstate();
+								if (freeDevice == -1) {											  // If there is no I/O device available
+									runningProcess->regstate = machine->cores[core]->regstate();  // TODO: move these 3 statements out
 									state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 								} else {
-									if (state->pendingRequests.empty()) {
+									if (state->pendingRequests.empty()) {  // If this is the only I/O request pending, just pass it to the I/O device
 										runningProcess->regstate = machine->cores[core]->regstate();
 										machine->ioDevices[freeDevice]->handle(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 									} else {
+										// If there were other I/O requests made previously, save the register states and I/O request details
 										runningProcess->regstate = machine->cores[core]->regstate();
 										state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 
+										// Service the first I/O request to besubmitted
 										IORequest req = state->pendingRequests.front();
 										state->pendingRequests.pop();
 										machine->ioDevices[freeDevice]->handle(req);
@@ -237,8 +248,10 @@ int main() {
 								break;
 							}
 							case Syscall::SYS_EXIT:
+								// Mark processs as done and save final register state
 								runningProcess->state = done;
 								runningProcess->doneTime = state->time;
+								runningProcess->regstate = machine->cores[core]->regstate();
 								break;
 						}
 
@@ -253,6 +266,7 @@ int main() {
 					}
 					break;
 				case StepAction::SERVICE_REQUEST: {
+					// Find the I/O device that is free
 					int freeDevice = -1;
 					for (int i = 0; i < machine->numIODevices; i++) {
 						if (!machine->ioDevices[i]->busy()) {
@@ -276,6 +290,7 @@ int main() {
 			}
 		}
 
+		// For all the processes that were unblocked during this step, insert them into the appropriate ready list
 		for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++) {
 			switch (state->strategy) {
 				case SchedulingStrategy::FIFO:

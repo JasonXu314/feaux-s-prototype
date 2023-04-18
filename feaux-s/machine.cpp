@@ -10,6 +10,7 @@ using namespace std;
 MachineState* machine = nullptr;
 
 CPU::CPU(uint8_t id) : _id(id) {
+	// Init to NOOP registers (see CPU::_readyNextInstruction)
 	_instruction = nullptr;
 	_registers.rip = (uint) nullptr;
 }
@@ -51,7 +52,7 @@ void CPU::tick() {
 
 void CPU::_readNextInstruction() {
 	if (_registers.rip == 0) {
-		_instruction = nullptr;
+		_instruction = nullptr;	 // NOOP (NOTE: DO NOT MODIFY RIP REGISTER)
 	} else {
 		_instruction = ((Instruction*)_registers.rip);
 		_registers.rip += sizeof(Instruction);
@@ -62,7 +63,7 @@ void IODevice::tick() {
 	if (_pid != 0) {
 		_progress++;
 
-		if (_progress > _duration) {
+		if (_progress > _duration) {  // The I/O request completed
 			IOInterrupt* interrupt = new IOInterrupt(_pid);
 
 			handleInterrupt(interrupt);
@@ -74,8 +75,10 @@ void IODevice::tick() {
 void IODevice::handle(const IORequest& req) {
 	if (_pid != 0) {
 		cerr << "IO Device " << _id << " asked to handle request from process " << req.pid << " while busy" << endl;
+		return;
 	}
 
+	// Load request data to begin processing
 	_pid = req.pid;
 	_duration = req.duration;
 	_progress = 0;

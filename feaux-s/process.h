@@ -27,16 +27,14 @@ using namespace std;
 struct PCB {
 	PCB() : pid(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
 
-	uint pid;  // The process ID, assigned when the process is admitted to the system
-	string name;
-
-	long arrivalTime;		// When the process will start/become runnable
-	long doneTime;			// Convenience variable, use this to keep track of when a process completes
-	long reqProcessorTime;	// Total amount of processor time needed
-	long processorTime;		// Amount of processor given to this process
-	uint level;
-	long processorTimeOnLevel;
-
-	State state;  // State of the process
-	Registers regstate;
+	uint pid;					// The process ID, assigned when the process is admitted to the system
+	string name;				// The name of the process (same as program name)
+	long arrivalTime;			// When the process was spawned
+	long doneTime;				// The time that the process completed execution
+	long reqProcessorTime;		// Total amount of processor time needed (number of instructions)
+	long processorTime;			// Total amount of processor time this process has received
+	uint level;					// The level the process is on (for MLF processing)
+	long processorTimeOnLevel;	// The amount of CPU time the process has received on the current level (for MLF processing)
+	State state;				// State of the process
+	Registers regstate;			// The saved state of registers of the process
 };

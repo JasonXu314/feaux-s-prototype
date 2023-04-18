@@ -30,7 +30,7 @@ void exported loadProgram(Instruction* instructionList, uint size, char* name) {
 }
 
 uint exported spawn(char* name) {
-	if (state->programs.count(name)) {
+	if (state->programs.count(name)) {	// If there exists a program of that name
 		Program& program = state->programs.at(name);
 		PCB* proc = new PCB();
 
@@ -40,7 +40,7 @@ uint exported spawn(char* name) {
 		proc->level = 0;
 		proc->processorTimeOnLevel = 0;
 		proc->state = ready;
-		proc->regstate.rip = (uint)program.instructions;
+		proc->regstate.rip = (uint)program.instructions;  // Loads the address of the first instruction into the instruction pointer of the process
 		proc->regstate.rdi = 0;
 		proc->reqProcessorTime = program.length - 1;
 
@@ -74,7 +74,7 @@ void exported unpause() { state->paused = false; }
 void exported setClockDelay(uint delay) { machine->clockDelay = delay; }
 
 void exported setSchedulingStrategy(SchedulingStrategy strategy) {
-	map<string, Program> programs = state->programs;
+	map<string, Program> programs = state->programs;  // Save a copy of the programs, so that the new OS will still have the same programs
 	cleanupOS();
 
 	for (uint i = 0; i < machine->numCores; i++) {
@@ -94,8 +94,8 @@ MachineStateCompat* exported getMachineState() {
 	static uint prevNumCores = 0, prevNumIODevices = 0;
 
 	if (exportMachineState == nullptr) {
-		exportMachineState = new MachineStateCompat();
-		// cout << (uintptr_t)&exportMachineState->clockDelay - (uintptr_t)exportMachineState << endl;
+		exportMachineState = new MachineStateCompat();	// Init exported data
+														// cout << (uintptr_t)&exportMachineState->clockDelay - (uintptr_t)exportMachineState << endl;
 	}
 
 	// cout << "Exporting primitives" << endl;
@@ -181,7 +181,7 @@ OSStateCompat* exported getOSState() {
 
 	uint i = 0;
 	exportState->numProcesses = state->processList.size();
-	if (exportState->numProcesses > 0) {
+	if (exportState->numProcesses > 0) {  // If there exist processes, export them
 		exportState->processList = new ProcessCompat[exportState->numProcesses];
 		for (auto it = state->processList.begin(); it != state->processList.end(); it++, i++) {
 			exportProcess(**it, exportState->processList[i]);
@@ -195,7 +195,7 @@ OSStateCompat* exported getOSState() {
 
 	// cout << "Exporting interrupts" << endl;
 	exportState->numInterrupts = state->interrupts.size();
-	if (exportState->numInterrupts > 0) {
+	if (exportState->numInterrupts > 0) {  // If there exist interrupts, export them
 		i = 0;
 		exportState->interrupts = new InterruptCompat[exportState->numInterrupts];
 		for (auto it = state->interrupts.begin(); it != state->interrupts.end(); it++, i++) {
@@ -216,6 +216,7 @@ OSStateCompat* exported getOSState() {
 
 					exportProcess(*ptr, exportState->readyList[i]);
 
+					// Pop and requeue to access the next process in the list
 					state->fifoReadyList.pop();
 					state->fifoReadyList.push(ptr);
 				}
@@ -230,6 +231,7 @@ OSStateCompat* exported getOSState() {
 			exportState->numReady = state->sjfReadyList.size();
 			if (exportState->numReady > 0) {
 				exportState->readyList = new ProcessCompat[exportState->numReady];
+				// Need to create copy of list in order to access all elements (priority queue does not allow iteration)
 				list<PCB*> copy;
 				for (uint i = 0; i < exportState->numReady; i++) {
 					PCB* ptr = state->sjfReadyList.top();
@@ -253,6 +255,7 @@ OSStateCompat* exported getOSState() {
 			exportState->numReady = state->srtReadyList.size();
 			if (exportState->numReady > 0) {
 				exportState->readyList = new ProcessCompat[exportState->numReady];
+				// Need to create copy of list in order to access all elements (priority queue does not allow iteration)
 				list<PCB*> copy;
 				for (uint i = 0; i < exportState->numReady; i++) {
 					PCB* ptr = state->srtReadyList.top();
@@ -285,6 +288,7 @@ OSStateCompat* exported getOSState() {
 
 						exportProcess(*ptr, exportState->mlfReadyLists[i][j]);
 
+						// Pop and requeue to access the next process in the list
 						state->mlfLists[i].pop();
 						state->mlfLists[i].push(ptr);
 					}
@@ -329,6 +333,8 @@ OSStateCompat* exported getOSState() {
 		exportState->pendingRequests = new IORequest[exportState->numRequests];
 		for (; i < exportState->numRequests; i++) {
 			exportState->pendingRequests[i] = state->pendingRequests.front();
+
+			// Pop and requeue to access the next process in the list
 			state->pendingRequests.push(state->pendingRequests.front());
 			state->pendingRequests.pop();
 		}
@@ -348,6 +354,7 @@ OSStateCompat* exported getOSState() {
 		if (state->runningProcess[i] != nullptr) {
 			exportProcess(*state->runningProcess[i], exportState->runningProcesses[i]);
 		} else {
+			// Export nonexistent process
 			exportState->runningProcesses[i].pid = -1;
 		}
 	}
