@@ -1,4 +1,5 @@
 import { Entity } from '../Entity';
+import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process } from '../types';
@@ -15,7 +16,7 @@ export class ReadyListIndicator extends Entity {
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
-		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'Ready List', { fontSize: 24 });
+		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 15)), 'Ready List', { fontSize: 24 });
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		if (readyList.length > 0) {
@@ -25,8 +26,9 @@ export class ReadyListIndicator extends Entity {
 		}
 	}
 
-	public selectedBy(point: Point): boolean {
+	public selectedBy(point: Point, view: View): boolean {
 		return (
+			view === View.PROCESSES &&
 			point.x >= this.center.x - this.width / 2 &&
 			point.x <= this.center.x + this.width / 2 &&
 			point.y >= this.center.y - this.height / 2 &&
@@ -64,7 +66,7 @@ export class ReadyListIndicator extends Entity {
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
+			center: new Point(-renderEngine.width / 2 + (WIDTH / 2 + 250), renderEngine.height / 2 - (HEIGHT / 2 + 75))
 		};
 	}
 }

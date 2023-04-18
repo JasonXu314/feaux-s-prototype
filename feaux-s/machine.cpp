@@ -51,7 +51,7 @@ void IODevice::tick() {
 	if (_pid != 0) {
 		_progress++;
 
-		if (_progress >= _duration) {
+		if (_progress > _duration) {
 			IOInterrupt* interrupt = new IOInterrupt(_pid);
 
 			handleInterrupt(interrupt);

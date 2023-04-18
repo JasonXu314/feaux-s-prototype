@@ -1,3 +1,4 @@
+import { View } from './OSEngine';
 import { ProcessState, SchedulingStrategy } from './types';
 
 // colors pulled from astro design (https://www.astrouxds.com/patterns/status-system/)
@@ -33,6 +34,17 @@ export function prettyStrategy(strategy: SchedulingStrategy): string {
 			return 'Shortest Remaining Time';
 		case SchedulingStrategy.MLF:
 			return 'Multi-Level Feedback';
+		default:
+			return 'whoops...';
+	}
+}
+
+export function prettyView(view: View): string {
+	switch (view) {
+		case View.HARDWARE:
+			return 'Hardware View';
+		case View.PROCESSES:
+			return 'Process View';
 		default:
 			return 'whoops...';
 	}

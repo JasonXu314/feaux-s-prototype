@@ -15,7 +15,8 @@ export enum StepAction {
 	HANDLE_INTERRUPT,
 	BEGIN_RUN,
 	CONTINUE_RUN,
-	HANDLE_SYSCALL
+	HANDLE_SYSCALL,
+	SERVICE_REQUEST
 }
 
 export enum SchedulingStrategy {

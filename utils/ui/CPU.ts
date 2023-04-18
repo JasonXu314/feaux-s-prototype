@@ -1,4 +1,5 @@
 import { Entity } from '../Entity';
+import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process } from '../types';
@@ -59,8 +60,9 @@ export class CPUIndicator extends Entity {
 		}
 	}
 
-	public selectedBy(point: Point): boolean {
+	public selectedBy(point: Point, view: View): boolean {
 		return (
+			view === View.HARDWARE &&
 			point.x >= this.center.x - WIDTH / 2 &&
 			point.x <= this.center.x + WIDTH / 2 &&
 			point.y <= this.center.y + HEIGHT / 2 &&
@@ -69,7 +71,7 @@ export class CPUIndicator extends Entity {
 	}
 
 	private _calculateCenter(renderEngine: RenderEngine): Point {
-		return new Point(-renderEngine.width / 2 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 25) - (HEIGHT + MARGIN) * this.core);
+		return new Point(-renderEngine.width / 2 + (WIDTH / 2 + 50), renderEngine.height / 2 - (HEIGHT / 2 + 50) - (HEIGHT + MARGIN) * this.core);
 	}
 }
 

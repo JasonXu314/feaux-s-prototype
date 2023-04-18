@@ -46,36 +46,52 @@ int main() {
 			state->stepAction[core] = StepAction::NOOP;
 
 			if (machine->cores[core]->free()) {
-				if (!state->interrupts.empty()) {
-					state->stepAction[core] = StepAction::HANDLE_INTERRUPT;	 // handle an interrupt
-				} else {
-					switch (state->strategy) {
-						case SchedulingStrategy::FIFO:
-							if (!state->fifoReadyList.empty()) {
-								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
-							}
+				if (!state->pendingRequests.empty()) {
+					bool deviceAvailable = false;
+					for (uint i = 0; i < machine->numIODevices; i++) {
+						if (!machine->ioDevices[i]->busy()) {
+							deviceAvailable = true;
 							break;
-						case SchedulingStrategy::SJF:
-							if (!state->sjfReadyList.empty()) {
-								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
-							}
-							break;
-						case SchedulingStrategy::SRT:
-							if (!state->srtReadyList.empty()) {
-								state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
-							}
-							break;
-						case SchedulingStrategy::MLF:
-							for (int i = 0; i < NUM_LEVELS; i++) {
-								if (!state->mlfLists[i].empty()) {
+						}
+					}
+
+					if (deviceAvailable) {
+						state->stepAction[core] = StepAction::SERVICE_REQUEST;
+					}
+				}
+
+				if (state->stepAction[core] == StepAction::NOOP) {
+					if (!state->interrupts.empty()) {
+						state->stepAction[core] = StepAction::HANDLE_INTERRUPT;	 // handle an interrupt
+					} else {
+						switch (state->strategy) {
+							case SchedulingStrategy::FIFO:
+								if (!state->fifoReadyList.empty()) {
 									state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
-									break;
 								}
-							}
-							break;
-						default:
-							cerr << "Debug: unrecognized scheduling strategy " << state->strategy << endl;
-							break;
+								break;
+							case SchedulingStrategy::SJF:
+								if (!state->sjfReadyList.empty()) {
+									state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+								}
+								break;
+							case SchedulingStrategy::SRT:
+								if (!state->srtReadyList.empty()) {
+									state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+								}
+								break;
+							case SchedulingStrategy::MLF:
+								for (int i = 0; i < NUM_LEVELS; i++) {
+									if (!state->mlfLists[i].empty()) {
+										state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
+										break;
+									}
+								}
+								break;
+							default:
+								cerr << "Debug: unrecognized scheduling strategy " << state->strategy << endl;
+								break;
+						}
 					}
 				}
 			} else {
@@ -201,31 +217,55 @@ int main() {
 									runningProcess->regstate = machine->cores[core]->regstate();
 									state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 								} else {
-									runningProcess->regstate = machine->cores[core]->regstate();
-									machine->ioDevices[freeDevice]->handle(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
-								}
+									if (state->pendingRequests.empty()) {
+										runningProcess->regstate = machine->cores[core]->regstate();
+										machine->ioDevices[freeDevice]->handle(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
+									} else {
+										runningProcess->regstate = machine->cores[core]->regstate();
+										state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 
-								runningProcess = nullptr;
-								state->runningProcess[core] = nullptr;
-								machine->cores[core]->load(NOPROC);
-								state->pendingSyscalls[core] = Syscall::SYS_NONE;
+										IORequest req = state->pendingRequests.front();
+										state->pendingRequests.pop();
+										machine->ioDevices[freeDevice]->handle(req);
+									}
+								}
 								break;
 							}
 							case Syscall::SYS_EXIT:
 								runningProcess->state = done;
 								runningProcess->doneTime = state->time;
-
-								runningProcess = nullptr;
-								state->runningProcess[core] = nullptr;
-								machine->cores[core]->load(NOPROC);
-								state->pendingSyscalls[core] = Syscall::SYS_NONE;
 								break;
 						}
+
+						runningProcess->processorTime++;
+						runningProcess = nullptr;
+						state->runningProcess[core] = nullptr;
+						machine->cores[core]->load(NOPROC);
+						state->pendingSyscalls[core] = Syscall::SYS_NONE;
 					} else {
 						cerr << "Debug, core " << core << ": No running process... somehow" << endl;
 						return 1;
 					}
 					break;
+				case StepAction::SERVICE_REQUEST: {
+					int freeDevice = -1;
+					for (int i = 0; i < machine->numIODevices; i++) {
+						if (!machine->ioDevices[i]->busy()) {
+							freeDevice = i;
+							break;
+						}
+					}
+
+					if (freeDevice == -1) {
+						cerr << "Debug, core " << core << ": attempting to service request, but no available device" << endl;
+						return 1;
+					} else {
+						IORequest req = state->pendingRequests.front();
+						state->pendingRequests.pop();
+						machine->ioDevices[freeDevice]->handle(req);
+					}
+					break;
+				}
 				case StepAction::NOOP:
 					break;
 			}

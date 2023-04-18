@@ -4,9 +4,12 @@ import { RenderEngine } from './RenderEngine';
 import { WASMEngine } from './WASMEngine';
 import { Instruction, Opcode, SchedulingStrategy } from './types';
 import { CPUIndicator } from './ui/CPU';
+import { IODeviceIndicator } from './ui/IODevice';
 import { MLFReadyListsIndicator } from './ui/MLFReadyLists';
 import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
+import { Tab } from './ui/Tab';
+import { prettyView } from './utils';
 
 export interface ProgramDescriptor {
 	name: string;
@@ -36,13 +39,20 @@ export enum MouseButton {
 	FORWARD
 }
 
+export enum View {
+	HARDWARE,
+	PROCESSES
+}
+
 export class OSEngine {
 	private readonly context: CanvasRenderingContext2D;
 	private readonly entities: Entity[] = [];
 	private readonly renderEngine: RenderEngine;
 	private readonly programs: Map<string, Instruction[]> = new Map();
+	private readonly tabs: Tab[] = [];
 
 	private readonly cpuIndicators: CPUIndicator[] = [];
+	private readonly ioDeviceIndicators: IODeviceIndicator[] = [];
 	private readonly readyListIndicator: ReadyListIndicator = new ReadyListIndicator();
 	private readonly mlfReadyListsIndicator: MLFReadyListsIndicator = new MLFReadyListsIndicator();
 	private readonly processListIndicator: ProcessListIndicator = new ProcessListIndicator();
@@ -52,8 +62,10 @@ export class OSEngine {
 	private _mousePos: Point | null = null;
 	private _mouseDown = false;
 	private _mouseDelta: Point | null = null;
-	private _numIndicators: number = 0;
+	private _numCPUIndicators: number = 0;
+	private _numIODeviceIndicators: number = 0;
 	private _schedulingStrategy: SchedulingStrategy = SchedulingStrategy.FIFO;
+	private _currentView: View = View.HARDWARE;
 
 	private _listeners: { [K in keyof EngineEvents]: EngineEvents[K][] };
 
@@ -75,10 +87,24 @@ export class OSEngine {
 			this.context = ctx;
 			this.renderEngine = new RenderEngine(ctx, canvas);
 
-			for (; this._numIndicators < 2; this._numIndicators++) {
-				const indicator = new CPUIndicator(this._numIndicators);
+			[View.HARDWARE, View.PROCESSES]
+				.map((view) => prettyView(view))
+				.forEach((view, i) => {
+					const tab = new Tab(new Point(-this.renderEngine.width / 2 + 75 + 100 * i, this.renderEngine.height / 2 - 25), view);
+					this.tabs.push(tab);
+					this.entities.push(tab);
+				});
+
+			for (; this._numCPUIndicators < 2; this._numCPUIndicators++) {
+				const indicator = new CPUIndicator(this._numCPUIndicators);
 
 				this.cpuIndicators.push(indicator);
+				this.entities.push(indicator);
+			}
+			for (; this._numIODeviceIndicators < 1; this._numIODeviceIndicators++) {
+				const indicator = new IODeviceIndicator(this._numIODeviceIndicators);
+
+				this.ioDeviceIndicators.push(indicator);
 				this.entities.push(indicator);
 			}
 			this.entities.push(this.readyListIndicator);
@@ -87,6 +113,12 @@ export class OSEngine {
 			this._listeners = { entityClicked: [], click: [], entityDblClicked: [], finishLoad: [] };
 
 			Promise.all(DEFAULT_PROGRAMS.map((descriptor) => this._preloadProgram(descriptor))).then(() => this._listeners.finishLoad.forEach((cb) => cb()));
+
+			this.on('entityClicked', (entity) => {
+				if (entity instanceof Tab) {
+					this._currentView = this.tabs.indexOf(entity);
+				}
+			});
 
 			canvas.addEventListener('mouseout', () => {
 				this._mousePos = null;
@@ -191,26 +223,32 @@ export class OSEngine {
 
 		const machineState = this.wasmEngine.getMachineState();
 		const osState = this.wasmEngine.getOSState();
-		// console.log(machineState, osState);
-		if (osState.interrupts.length > 0) {
-			console.log(osState.interrupts);
-		}
-		this.cpuIndicators.forEach((cpu, i) =>
-			cpu.render(this.renderEngine, {
-				available: machineState.cores[i].available,
-				process: machineState.cores[i].available ? null : osState.runningProcesses[i]
-			})
-		);
+		this.tabs.forEach((tab, i) => tab.render(this.renderEngine, this._selectedEntity === tab, this._currentView === i));
+		this.renderEngine.rect(new Point(0, -12), this.renderEngine.width - 51, this.renderEngine.height - 51, 'black');
 
-		if (this._schedulingStrategy === SchedulingStrategy.MLF) {
-			this.mlfReadyListsIndicator.render(this.renderEngine, osState.mlfReadyLists);
-		} else {
-			this.readyListIndicator.render(this.renderEngine, osState.readyList);
+		switch (this._currentView) {
+			case View.HARDWARE:
+				this.cpuIndicators.forEach((cpu, i) =>
+					cpu.render(this.renderEngine, {
+						available: machineState.cores[i].available,
+						process: machineState.cores[i].available ? null : osState.runningProcesses[i]
+					})
+				);
+				this.ioDeviceIndicators.forEach((device, i) => device.render(this.renderEngine, machineState.ioDevices[i]));
+				break;
+			case View.PROCESSES:
+				if (this._schedulingStrategy === SchedulingStrategy.MLF) {
+					this.mlfReadyListsIndicator.render(this.renderEngine, osState.mlfReadyLists);
+				} else {
+					this.readyListIndicator.render(this.renderEngine, osState.readyList);
+				}
+
+				this.processListIndicator.render(this.renderEngine, osState.processList, {
+					selected: this._selectedEntity === this.processListIndicator,
+					mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData
+				});
+				break;
 		}
-		this.processListIndicator.render(this.renderEngine, osState.processList, {
-			selected: this._selectedEntity === this.processListIndicator,
-			mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData
-		});
 
 		if (this._mouseDelta) {
 			this._mouseDelta = new Point();
@@ -223,6 +261,10 @@ export class OSEngine {
 
 			return [...instructions, ...this._compile(mnemonic, operand)];
 		}, []);
+
+		if (instructionList.at(-1)?.opcode !== Opcode.EXIT) {
+			instructionList.push({ opcode: Opcode.EXIT, operand: -1 });
+		}
 
 		this.programs.set(name, instructionList);
 		this.wasmEngine.loadProgram(instructionList, name);
@@ -264,7 +306,7 @@ export class OSEngine {
 			const reversedEntities = this.entities.reduce<Entity[]>((arr, entity) => [entity, ...arr], []);
 
 			for (const entity of reversedEntities) {
-				if (entity.selectedBy(this._mousePos)) {
+				if (entity.selectedBy(this._mousePos, this._currentView)) {
 					this._selectedEntity = entity;
 					return;
 				}

@@ -1,3 +1,4 @@
+import { View } from './OSEngine';
 import { Point } from './Point';
 
 export interface Metadata {
@@ -8,6 +9,6 @@ export interface Metadata {
 export type MouseData = { position: Point | null } & ({ down: true; delta: Point } | { down: false; delta: null });
 
 export abstract class Entity {
-	public abstract selectedBy(point: Point): boolean;
+	public abstract selectedBy(point: Point, view: View): boolean;
 }
 

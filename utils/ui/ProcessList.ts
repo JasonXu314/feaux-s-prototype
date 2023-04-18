@@ -1,4 +1,5 @@
 import { Entity, Metadata } from '../Entity';
+import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process, ProcessState } from '../types';
@@ -17,7 +18,7 @@ export class ProcessListIndicator extends Entity {
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
-		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 20)), 'All Processes', { fontSize: 24 });
+		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 15)), 'All Processes', { fontSize: 24 });
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		if (processList.length > 0) {
@@ -31,8 +32,9 @@ export class ProcessListIndicator extends Entity {
 		}
 	}
 
-	public selectedBy(point: Point): boolean {
+	public selectedBy(point: Point, view: View): boolean {
 		return (
+			view === View.PROCESSES &&
 			point.x >= this.center.x - this.width / 2 &&
 			point.x <= this.center.x + this.width / 2 &&
 			point.y >= this.center.y - this.height / 2 &&
@@ -87,7 +89,7 @@ export class ProcessListIndicator extends Entity {
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(-renderEngine.width / 2 + 340 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 50))
+			center: new Point(-renderEngine.width / 2 + 25 + (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 75))
 		};
 	}
 }

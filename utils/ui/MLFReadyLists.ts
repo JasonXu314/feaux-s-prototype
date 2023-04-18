@@ -1,4 +1,5 @@
 import { Entity } from '../Entity';
+import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
 import { Process } from '../types';
@@ -18,13 +19,13 @@ export class MLFReadyListsIndicator extends Entity {
 		this.height = HEIGHT;
 		this.width = WIDTH;
 
-		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 45)), 'MLF Lists', { fontSize: 24 });
+		renderEngine.text(center.add(new Point(0, HEIGHT / 2 + 35)), 'MLF Lists', { fontSize: 24 });
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		readyLists.forEach((readyList, i) => {
 			const xOFfset = -WIDTH / 2 + i * 200 + 100;
 
-			renderEngine.text(center.add(new Point(xOFfset, HEIGHT / 2 + 20)), `Priority ${6 - i}`, { fontSize: 18 });
+			renderEngine.text(center.add(new Point(xOFfset, HEIGHT / 2 + 15)), `Priority ${6 - i}`, { fontSize: 18 });
 			if (readyList.length > 0) {
 				readyList.forEach((process, j) => this._renderProcess(renderEngine, process, center.add(new Point(xOFfset, HEIGHT / 2 - (j * 100 + 50)))));
 			} else {
@@ -33,8 +34,9 @@ export class MLFReadyListsIndicator extends Entity {
 		});
 	}
 
-	public selectedBy(point: Point): boolean {
+	public selectedBy(point: Point, view: View): boolean {
 		return (
+			view === View.PROCESSES &&
 			point.x >= this.center.x - this.width / 2 &&
 			point.x <= this.center.x + this.width / 2 &&
 			point.y >= this.center.y - this.height / 2 &&
@@ -72,7 +74,7 @@ export class MLFReadyListsIndicator extends Entity {
 		return {
 			HEIGHT,
 			WIDTH,
-			center: new Point(renderEngine.width / 2 - (WIDTH / 2 + 25), renderEngine.height / 2 - (HEIGHT / 2 + 75))
+			center: new Point(-renderEngine.width / 2 + (WIDTH / 2 + 250), renderEngine.height / 2 - (HEIGHT / 2 + 95))
 		};
 	}
 }

@@ -18,7 +18,7 @@ class IODevice;
 #define NUM_LEVELS 6
 typedef unsigned int uint;
 
-enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL };
+enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL, SERVICE_REQUEST };
 enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
 enum State { ready, processing, blocked, done };  // Used to track the process states
 enum Opcode { NOP, WORK, IO, EXIT };
