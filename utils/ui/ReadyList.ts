@@ -41,7 +41,7 @@ export class ReadyListIndicator extends Entity {
 		const nameMetrics = renderEngine.measure(nameLabel);
 		renderEngine.text(pos.add(new Point(-150 + nameMetrics.width / 2 + 5, 50 - height(nameMetrics) / 2 - 5)), nameLabel);
 
-		const pidLabel = `PID: ${proc.id}`;
+		const pidLabel = `PID: ${proc.pid}`;
 		const pidMetrics = renderEngine.measure(pidLabel);
 		renderEngine.text(pos.add(new Point(-150 + pidMetrics.width / 2 + 5, 35 - height(nameMetrics) / 2 - 5)), pidLabel);
 

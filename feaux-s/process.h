@@ -24,30 +24,19 @@ it should enter a blocked state for IOEvent::duration time steps.
 
 using namespace std;
 
-struct IOEvent {
-	IOEvent() : id(9999999), time(-1), duration(0){};
-	IOEvent(const int& t, const int& d, const unsigned int& newId) : id(newId), time(t), duration(d) {}
+struct PCB {
+	PCB() : pid(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
 
-	unsigned int id;
-
-	long time;		// The time the event occurs during the process execution
-	long duration;	// The duration that the process will be Blocked by this IOEvent
-};
-
-struct Process {
-	Process() : id(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
-
-	unsigned int id;  // The process ID, assigned when the process is admitted to the system
+	uint pid;  // The process ID, assigned when the process is admitted to the system
 	string name;
 
 	long arrivalTime;		// When the process will start/become runnable
 	long doneTime;			// Convenience variable, use this to keep track of when a process completes
 	long reqProcessorTime;	// Total amount of processor time needed
 	long processorTime;		// Amount of processor given to this process
-	unsigned int level;
+	uint level;
 	long processorTimeOnLevel;
 
 	State state;  // State of the process
-
-	list<IOEvent> ioEvents;	 // The IO events for this process, stored in order of the time into the process execution that they start
+	Registers regstate;
 };

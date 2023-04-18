@@ -51,7 +51,7 @@ export class ProcessListIndicator extends Entity {
 		const nameMetrics = renderEngine.measure(nameLabel);
 		renderEngine.text(pos.add(new Point(-90 + nameMetrics.width / 2 + 15, 25 - height(nameMetrics) / 2 - 5)), nameLabel);
 
-		const pidLabel = `PID: ${proc.id}`;
+		const pidLabel = `PID: ${proc.pid}`;
 		const pidMetrics = renderEngine.measure(pidLabel);
 		renderEngine.text(pos.add(new Point(-90 + pidMetrics.width / 2 + 15, 10 - height(nameMetrics) / 2 - 5)), pidLabel);
 
@@ -73,7 +73,7 @@ export class ProcessListIndicator extends Entity {
 				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.blue);
 				break;
 			default:
-				throw new Error('Invalid process state');
+				throw new Error(`Invalid process state: ${proc.state}`);
 		}
 	}
 

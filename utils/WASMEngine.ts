@@ -1,6 +1,9 @@
 import { Memory } from './Memory';
+import { CPUState } from './cpp-compat/CPUState';
+import { DeviceState } from './cpp-compat/DeviceState';
+import { IORequest } from './cpp-compat/IORequest';
 import { Process } from './cpp-compat/Process';
-import { IOInterrupt, Instruction, MachineState, OSState, Ptr, RawMachineState, RawOSState, SchedulingStrategy } from './types';
+import { IOInterrupt, Instruction, MachineState, OSState, Ptr, SchedulingStrategy } from './types';
 
 export interface WASMModule {
 	HEAP8: Int8Array;
@@ -14,13 +17,14 @@ export interface WASMModule {
 	asm: {
 		memory: WebAssembly.Memory;
 
-		addProcess(instructionList: Ptr<Instruction[]>, size: number, stringPtr: Ptr<string>): void;
+		loadProgram(instructionList: Ptr<Instruction[]>, size: number, name: Ptr<string>): void;
+		spawn(name: Ptr<string>): number;
 		allocInstructionList(size: number): Ptr<Instruction[]>;
 		allocString(size: number): Ptr<string>;
 		freeInstructionList(addr: Ptr<Instruction[]>): void;
 		freeString(addr: Ptr<string>): void;
-		getMachineState(): Ptr<RawMachineState>;
-		getOSState(): Ptr<RawOSState>;
+		getMachineState(): number;
+		getOSState(): number;
 		pause(): void;
 		unpause(): void;
 		setClockDelay(delay: number): void;
@@ -35,7 +39,7 @@ export class WASMEngine {
 		this.memory = new Memory(module.asm.memory);
 	}
 
-	public addProcess(instructionList: Instruction[], name: string): void {
+	public loadProgram(instructionList: Instruction[], name: string): void {
 		const ilPtr = this.module.asm.allocInstructionList(instructionList.length);
 		instructionList.forEach((instruction, i) => {
 			this.memory.writeUint8(ilPtr + i * 2, instruction.opcode);
@@ -45,28 +49,40 @@ export class WASMEngine {
 		const strPtr = this.module.asm.allocString(name.length);
 		this.memory.writeString(strPtr, name);
 
-		this.module.asm.addProcess(ilPtr, instructionList.length, strPtr);
+		this.module.asm.loadProgram(ilPtr, instructionList.length, strPtr);
 
 		this.module.asm.freeInstructionList(ilPtr);
 		this.module.asm.freeString(strPtr);
 	}
 
+	public spawn(name: string): number {
+		const strPtr = this.module.asm.allocString(name.length);
+		this.memory.writeString(strPtr, name);
+
+		const pid = this.module.asm.spawn(strPtr);
+
+		this.module.asm.freeString(strPtr);
+
+		return pid;
+	}
+
 	public getMachineState(): MachineState {
 		const ptr = this.module.asm.getMachineState();
 
-		const numCores = this.memory.readUint32(ptr);
+		const numCores = this.memory.readUint8(ptr);
+		const numIODevices = this.memory.readUint8(ptr + 1);
 		const clockDelay = this.memory.readUint32(ptr + 4);
 
-		const availablePtr = this.memory.readUint32(ptr + 8);
-		const available = new Array(numCores).fill(null).map((_, i) => this.memory.readUint8(availablePtr + i) === 1);
+		const cores = CPUState.readFrom(this.memory, this.memory.readUint32(ptr + 8), numCores);
 
-		const runningProcess = Process.readFrom(this.memory, this.memory.readUint32(ptr + 12), numCores);
+		const ioDevices = DeviceState.readFrom(this.memory, this.memory.readUint32(ptr + 12), numIODevices);
 
 		return {
 			numCores,
+			numIODevices,
 			clockDelay,
-			available,
-			runningProcess
+			cores,
+			ioDevices
 		};
 	}
 
@@ -89,15 +105,23 @@ export class WASMEngine {
 		const numReentering = this.memory.readUint32(ptr + 24);
 		const reentryList = Process.readFrom(this.memory, this.memory.readUint32(ptr + 28), numReentering);
 
-		const numStepAction = this.getMachineState().numCores;
+		const numCores = this.getMachineState().numCores;
 		const stepActionPtr = this.memory.readUint32(ptr + 32);
-		const stepAction = new Array(numStepAction).fill(null).map((_, i) => this.memory.readUint32(stepActionPtr + i * 4));
+		const stepAction = new Array(numCores).fill(null).map((_, i) => this.memory.readUint32(stepActionPtr + i * 4));
 
 		const time = this.memory.readUint32(ptr + 36);
 		const paused = this.memory.readUint8(ptr + 40) === 1;
 
 		const mlfNumReady = new Array(6).fill(null).map((_, i) => this.memory.readUint32(ptr + 44 + i * 4));
 		const mlfReadyLists = new Array(6).fill(null).map((_, i) => Process.readFrom(this.memory, this.memory.readUint32(ptr + 68 + i * 4), mlfNumReady[i]));
+
+		const numRequests = this.memory.readUint32(ptr + 92);
+		const pendingRequests = IORequest.readFrom(this.memory, this.memory.readUint32(ptr + 96), numRequests);
+
+		const syscallsPtr = this.memory.readUint32(ptr + 100);
+		const pendingSyscalls = new Array(numCores).fill(null).map((_, i) => this.memory.readUint32(syscallsPtr + i * 4));
+
+		const runningProcesses = Process.readFrom(this.memory, this.memory.readUint32(ptr + 104), numCores);
 
 		return {
 			processList,
@@ -107,7 +131,10 @@ export class WASMEngine {
 			stepAction,
 			time,
 			paused,
-			mlfReadyLists
+			mlfReadyLists,
+			pendingRequests,
+			pendingSyscalls,
+			runningProcesses
 		};
 	}
 

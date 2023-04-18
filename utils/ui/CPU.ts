@@ -49,7 +49,7 @@ export class CPUIndicator extends Entity {
 			const nameMetrics = renderEngine.measure(processNameLabel);
 			renderEngine.text(this.center.add(new Point(-WIDTH / 2 + 25 + nameMetrics.width / 2, 40)), processNameLabel);
 
-			const pidLabel = `PID: ${data.process!.id}`;
+			const pidLabel = `PID: ${data.process!.pid}`;
 			const pidMetrics = renderEngine.measure(pidLabel);
 			renderEngine.text(this.center.add(new Point(-WIDTH / 2 + 25 + pidMetrics.width / 2, 25)), pidLabel);
 

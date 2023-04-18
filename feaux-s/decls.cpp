@@ -3,9 +3,9 @@
 #include "process.h"
 
 uint nextPID = 0;
-MachineState* machineState = nullptr;
-OSState* state = nullptr;
 
-bool SJFComparator::operator()(Process* a, Process* b) { return a->reqProcessorTime > b->reqProcessorTime; }
+const Registers NOPROC{0, 0};
 
-bool SRTComparator::operator()(Process* a, Process* b) { return (a->reqProcessorTime - a->processorTime) > (b->reqProcessorTime - b->processorTime); }
+bool SJFComparator::operator()(PCB* a, PCB* b) { return a->reqProcessorTime > b->reqProcessorTime; }
+
+bool SRTComparator::operator()(PCB* a, PCB* b) { return (a->reqProcessorTime - a->processorTime) > (b->reqProcessorTime - b->processorTime); }

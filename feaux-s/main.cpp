@@ -3,8 +3,10 @@
 #include <list>
 #include <queue>
 
+#include "browser-api.h"
 #include "decls.h"
-#include "ioModule.h"
+#include "machine.h"
+#include "os.h"
 #include "process.h"
 #include "utils.h"
 
@@ -12,17 +14,11 @@
 EM_JS(void, jssleep, (int milis), { Asyncify.handleSleep(wakeUp => { setTimeout(wakeUp, milis); }); });
 // clang-format on
 
-void initOS(uint numCores, SchedulingStrategy strategy);
-void cleanupOS();
-
-Process* schedule(uint core);
+#define PRINT_SIZE(type) cout << #type ": " << sizeof(type) << endl
 
 int main() {
-	cout << sizeof(OSStateCompat) << endl;
-
-	machineState = new MachineState{2, 500, new bool[2]{true, true}, new Process*[2]};
-
-	initOS(machineState->numCores, SchedulingStrategy::FIFO);
+	initMachine(2, 1);
+	initOS(machine->numCores, SchedulingStrategy::FIFO);
 
 	// keep running the loop until all processes have been added and have run to completion
 	while (true) {
@@ -31,10 +27,10 @@ int main() {
 		}
 
 		// Update our current time step
-		++(state->time);
+		state->time++;
 
-		// update the status for any active IO requests
-		state->ioModule->ioProcessing(state->time);
+		for (uint8_t i = 0; i < machine->numCores; i++) machine->cores[i]->tick();
+		for (uint8_t i = 0; i < machine->numIODevices; i++) machine->ioDevices[i]->tick();
 
 		// If the processor is tied up running a process, then continue running it until it is done or blocks
 		//    note: be sure to check for things that should happen as the process continues to run (io, completion...)
@@ -44,12 +40,12 @@ int main() {
 		//  - start processing a ready process if there are any ready
 
 		// init the stepAction, update below
-		for (uint core = 0; core < machineState->numCores; core++) {
-			Process* runningProcess = machineState->runningProcess[core];
+		for (uint core = 0; core < machine->numCores; core++) {
+			PCB* runningProcess = state->runningProcess[core];
 
 			state->stepAction[core] = StepAction::NOOP;
 
-			if (machineState->available[core]) {
+			if (machine->cores[core]->free()) {
 				if (!state->interrupts.empty()) {
 					state->stepAction[core] = StepAction::HANDLE_INTERRUPT;	 // handle an interrupt
 				} else {
@@ -83,14 +79,12 @@ int main() {
 					}
 				}
 			} else {
-				if (runningProcess->processorTime == runningProcess->reqProcessorTime) {
-					state->stepAction[core] = StepAction::COMPLETE;	 // running process is finished
-				} else if (!runningProcess->ioEvents.empty() && runningProcess->ioEvents.front().time == runningProcess->processorTime) {
-					state->stepAction[core] = StepAction::IO_REQUEST;	  // running process issued an io request
+				if (state->pendingSyscalls[core] != Syscall::SYS_NONE) {
+					state->stepAction[core] = StepAction::HANDLE_SYSCALL;
 				} else if (state->strategy == SchedulingStrategy::MLF) {  // might need to reschedule if using Multi-level Feedback scheduling
 					bool coreAvailable = false;
-					for (uint i = 0; i < machineState->numCores; i++) {
-						if (machineState->available[i]) {
+					for (uint i = 0; i < machine->numCores; i++) {
+						if (machine->cores[i]->free()) {
 							coreAvailable = true;
 							break;
 						}
@@ -114,43 +108,55 @@ int main() {
 			}
 
 			switch (state->stepAction[core]) {
-				case StepAction::HANDLE_INTERRUPT:
+				case StepAction::HANDLE_INTERRUPT: {
 					if (!state->interrupts.empty()) {
-						IOInterrupt interrupt = state->interrupts.front();
+						Interrupt* interrupt = state->interrupts.front();
 						state->interrupts.pop_front();
 
-						Process* originProcess = nullptr;
-						for (auto it = state->processList.begin(); it != state->processList.end(); it++) {
-							if ((*it)->id == interrupt.procID) {
-								originProcess = *it;
+						switch (interrupt->type()) {
+							case InterruptType::IO_COMPLETION: {
+								IOInterrupt* ioInterrupt = (IOInterrupt*)interrupt;
+
+								PCB* originProcess = nullptr;
+								for (auto it = state->processList.begin(); it != state->processList.end(); it++) {
+									if ((*it)->pid == ioInterrupt->pid()) {
+										originProcess = *it;
+									}
+								}
+
+								if (originProcess == nullptr) {
+									cerr << "Debug, core " << core << ": unable to find origin process of IOEvent" << endl;
+									return 1;
+								} else {
+									originProcess->state = ready;
+									state->reentryList.push_back(originProcess);
+								}
+								break;
 							}
+							default:
+								cerr << "Debug, core " << core << ": Unknown interrupt type " << interrupt->type() << endl;
+								break;
 						}
 
-						if (originProcess == nullptr) {
-							cerr << "Debug, core " << core << ": unable to find origin process of IOEvent" << endl;
-							return 1;
-						} else {
-							originProcess->state = ready;
-							state->reentryList.push_back(originProcess);
-						}
+						delete interrupt;
 					} else {
 						cerr << "Debug, core " << core << ": trying to handle nonexistent interrupt" << endl;
 						return 1;
 					}
 					break;
-				case StepAction::BEGIN_RUN:
-					runningProcess = schedule(core);
+					case StepAction::BEGIN_RUN:
+						runningProcess = schedule(core);
 
-					if (runningProcess == nullptr) {
-						cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
-						return 1;
-					}
+						if (runningProcess == nullptr) {
+							cerr << "Debug, core " << core << ": Attempting to run a nonexistent process" << endl;
+							return 1;
+						}
 
-					runningProcess->state = processing;
-					runningProcess->processorTime++;
-					machineState->available[core] = false;
-					machineState->runningProcess[core] = runningProcess;
-					break;
+						runningProcess->state = processing;
+						state->runningProcess[core] = runningProcess;
+						machine->cores[core]->load(runningProcess->regstate);
+						break;
+				}
 				case StepAction::CONTINUE_RUN:
 					if (runningProcess != nullptr) {
 						runningProcess->processorTime++;
@@ -159,60 +165,64 @@ int main() {
 						}
 
 						if (state->strategy == SchedulingStrategy::MLF && runningProcess->level < NUM_LEVELS - 1 &&
-							runningProcess->processorTimeOnLevel >= (0b10 << runningProcess->level)) {
+							runningProcess->processorTimeOnLevel > (0b10 << runningProcess->level)) {
 							runningProcess->state = ready;
 							runningProcess->level++;
 							runningProcess->processorTimeOnLevel = 0;
 							state->reentryList.push_back(runningProcess);
 
-							machineState->available[core] = true;
-							machineState->runningProcess[core] = nullptr;
+							state->runningProcess[core] = nullptr;
+							Registers regstate = machine->cores[core]->regstate();
+							machine->cores[core]->load(NOPROC);
+							runningProcess->regstate = regstate;
 						}
 					} else {
 						cerr << "Debug, core " << core << ": trying to run a nonexistent process" << endl;
 						return 1;
 					}
 					break;
-				case StepAction::IO_REQUEST:
+				case StepAction::HANDLE_SYSCALL:
 					if (runningProcess != nullptr) {
-						if (!runningProcess->ioEvents.empty()) {
-							if (runningProcess->ioEvents.front().time == runningProcess->processorTime) {
-								IOEvent event = runningProcess->ioEvents.front();
-								runningProcess->ioEvents.pop_front();
+						switch (state->pendingSyscalls[core]) {
+							case Syscall::SYS_NONE:
+								cerr << "Debug, core " << core << ": handling nonexistent syscall" << endl;
+								return 1;
+							case Syscall::SYS_IO: {
+								int freeDevice = -1;
+								for (int i = 0; i < machine->numIODevices; i++) {
+									if (!machine->ioDevices[i]->busy()) {
+										freeDevice = i;
+										break;
+									}
+								}
 
 								runningProcess->state = blocked;
-								state->ioModule->submitIORequest(state->time, event, *runningProcess);
+								if (freeDevice == -1) {
+									runningProcess->regstate = machine->cores[core]->regstate();
+									state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
+								} else {
+									runningProcess->regstate = machine->cores[core]->regstate();
+									machine->ioDevices[freeDevice]->handle(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
+								}
 
 								runningProcess = nullptr;
-								machineState->runningProcess[core] = nullptr;
-								machineState->available[core] = true;
-							} else {
-								cerr << "Debug, core " << core << ": handling io request at wrong time" << endl;
-								return 1;
+								state->runningProcess[core] = nullptr;
+								machine->cores[core]->load(NOPROC);
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
+								break;
 							}
-						} else {
-							cerr << "Debug, core " << core << ": handling nonexistent io request" << endl;
-							return 1;
+							case Syscall::SYS_EXIT:
+								runningProcess->state = done;
+								runningProcess->doneTime = state->time;
+
+								runningProcess = nullptr;
+								state->runningProcess[core] = nullptr;
+								machine->cores[core]->load(NOPROC);
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
+								break;
 						}
 					} else {
 						cerr << "Debug, core " << core << ": No running process... somehow" << endl;
-						return 1;
-					}
-					break;
-				case StepAction::COMPLETE:
-					if (runningProcess != nullptr) {
-						if (runningProcess->processorTime == runningProcess->reqProcessorTime) {
-							runningProcess->state = done;
-							runningProcess->doneTime = state->time;
-
-							runningProcess = nullptr;
-							machineState->runningProcess[core] = nullptr;
-							machineState->available[core] = true;
-						} else {
-							cerr << "Debug, core " << core << ": running process completing at incorrect time" << endl;
-						}
-					} else {
-						cerr << "Debug, core " << core << ": no running process to complete... somehow" << endl;
 						return 1;
 					}
 					break;
@@ -240,91 +250,8 @@ int main() {
 		state->reentryList.clear();
 
 	skip:
-		jssleep(machineState->clockDelay);
+		jssleep(machine->clockDelay);
 	}
 
 	return 0;
-}
-
-void initOS(uint numCores, SchedulingStrategy strategy) {
-	state = new OSState();
-
-	state->stepAction = new StepAction[numCores];
-	state->time = 0;
-	state->ioModule = new IOModule(state->interrupts);
-	state->paused = false;
-	state->time = 0;
-
-	state->strategy = strategy;
-	if (strategy == SchedulingStrategy::MLF) {
-		state->mlfLists = new queue<Process*>[NUM_LEVELS];
-	} else {
-		state->mlfLists = nullptr;
-	}
-}
-
-void cleanupOS() {
-	for (auto it = state->processList.begin(); it != state->processList.end(); it++) {
-		delete *it;
-	}
-
-	if (state->strategy == SchedulingStrategy::MLF) {
-		delete[] state->mlfLists;
-	}
-
-	delete[] state->stepAction;
-	delete state->ioModule;
-	delete state;
-}
-
-Process* schedule(uint core) {
-	switch (state->strategy) {
-		case SchedulingStrategy::FIFO:
-			if (!state->fifoReadyList.empty()) {
-				Process* proc = state->fifoReadyList.front();
-				state->fifoReadyList.pop();
-
-				return proc;
-			}
-			break;
-		case SchedulingStrategy::SJF:
-			if (!state->sjfReadyList.empty()) {
-				Process* proc = state->sjfReadyList.top();
-				state->sjfReadyList.pop();
-
-				return proc;
-			}
-			break;
-		case SchedulingStrategy::SRT:
-			if (!state->srtReadyList.empty()) {
-				Process* proc = state->srtReadyList.top();
-				state->srtReadyList.pop();
-
-				return proc;
-			}
-			break;
-		case SchedulingStrategy::MLF:
-			for (int i = 0; i < NUM_LEVELS; i++) {
-				if (!state->mlfLists[i].empty()) {
-					Process* proc = state->mlfLists[i].front();
-					state->mlfLists[i].pop();
-
-					if (!machineState->available[core]) {
-						Process* runningProcess = machineState->runningProcess[core];
-
-						runningProcess->state = ready;
-						runningProcess->processorTimeOnLevel = 0;
-						state->mlfLists[runningProcess->level].emplace(runningProcess);
-
-						machineState->available[core] = true;
-						machineState->runningProcess[core] = nullptr;
-					}
-
-					return proc;
-				}
-			}
-			break;
-	}
-
-	return nullptr;
 }

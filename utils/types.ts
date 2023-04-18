@@ -15,8 +15,7 @@ export enum StepAction {
 	HANDLE_INTERRUPT,
 	BEGIN_RUN,
 	CONTINUE_RUN,
-	IO_REQUEST,
-	COMPLETE
+	HANDLE_SYSCALL
 }
 
 export enum SchedulingStrategy {
@@ -29,18 +28,28 @@ export enum SchedulingStrategy {
 export enum Opcode {
 	NOP,
 	WORK,
-	IO
+	IO,
+	EXIT
 }
 
-export type IOEvent = {
-	id: number;
-	time: number;
-	duration: number;
-};
+export enum InterruptType {
+	IO_COMPLETION
+}
+
+export enum Syscall {
+	SYS_NONE,
+	SYS_IO,
+	SYS_EXIT
+}
 
 export type IOInterrupt = {
 	ioEventID: number;
 	procID: number;
+};
+
+export type IORequest = {
+	pid: number;
+	duration: number;
 };
 
 export type Instruction = {
@@ -48,40 +57,51 @@ export type Instruction = {
 	operand: number;
 };
 
+export type Registers = {
+	rip: number;
+	rdi: number;
+};
+
 export type Process = {
-	id: number;
+	pid: number;
 	name: string;
 	arrivalTime: number;
 	doneTime: number;
 	reqProcessorTime: number;
 	processorTime: number;
 	state: ProcessState;
-	ioEvents: IOEvent[];
+};
+
+export type CPUState = {
+	available: boolean;
+	regstate: Registers;
+};
+
+export type DeviceState = {
+	pid: number;
+	duration: number;
+	progress: number;
 };
 
 export type RawProcess = {
-	id: number;
+	pid: number;
 	name: Ptr<string>;
 	arrivalTime: number;
 	doneTime: number;
 	reqProcessorTime: number;
 	processorTime: number;
+	level: number;
+	processorTimeOnLevel: number;
 	state: ProcessState;
-	ioEvents: Ptr<IOEvent>;
+	regstate: Registers;
 };
 
 export type MachineState = {
 	numCores: number;
+	numIODevices: number;
 	clockDelay: number;
-	available: boolean[];
-	runningProcess: Process[];
-};
-
-export type RawMachineState = {
-	numCores: number;
-	clockDelay: number;
-	available: boolean[];
-	runningProcess: Ptr<Process>[];
+	cores: CPUState[];
+	ioDevices: DeviceState[];
 };
 
 export type OSState = {
@@ -93,15 +113,8 @@ export type OSState = {
 	time: number;
 	paused: boolean;
 	mlfReadyLists: Process[][];
-};
-
-export type RawOSState = {
-	processList: Ptr<Process>;
-	interrupts: Ptr<IOInterrupt>;
-	readyList: Ptr<Process>;
-	reentryList: Ptr<Process>;
-	stepAction: Ptr<StepAction>;
-	time: number;
-	paused: boolean;
+	pendingRequests: IORequest[];
+	pendingSyscalls: Syscall[];
+	runningProcesses: Process[];
 };
 

@@ -163,7 +163,12 @@ export class OSEngine {
 	}
 
 	public spawn(program: string): void {
-		this.wasmEngine.addProcess(this.programs.get(program)!, program);
+		if (!this.programs.has(program)) {
+			console.error('Unknown program', program);
+			return;
+		}
+
+		this.wasmEngine.spawn(program);
 	}
 
 	private _tick(): void {
@@ -186,8 +191,15 @@ export class OSEngine {
 
 		const machineState = this.wasmEngine.getMachineState();
 		const osState = this.wasmEngine.getOSState();
+		// console.log(machineState, osState);
+		if (osState.interrupts.length > 0) {
+			console.log(osState.interrupts);
+		}
 		this.cpuIndicators.forEach((cpu, i) =>
-			cpu.render(this.renderEngine, { available: machineState.available[i], process: machineState.available[i] ? null : machineState.runningProcess[i] })
+			cpu.render(this.renderEngine, {
+				available: machineState.cores[i].available,
+				process: machineState.cores[i].available ? null : osState.runningProcesses[i]
+			})
 		);
 
 		if (this._schedulingStrategy === SchedulingStrategy.MLF) {
@@ -206,13 +218,14 @@ export class OSEngine {
 	}
 
 	public compileProgram(name: string, code: string): void {
-		const instructionList = code.split('\n').map((line) => {
+		const instructionList = code.split('\n').reduce<Instruction[]>((instructions, line) => {
 			const [mnemonic, operand] = line.split(' ');
 
-			return this._compile(mnemonic, operand);
-		});
+			return [...instructions, ...this._compile(mnemonic, operand)];
+		}, []);
 
 		this.programs.set(name, instructionList);
+		this.wasmEngine.loadProgram(instructionList, name);
 	}
 
 	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
@@ -230,14 +243,17 @@ export class OSEngine {
 			.catch((err) => console.error(`Error loading default program ${name}`, err));
 	}
 
-	private _compile(mnemonic: string, operand: string): Instruction {
+	private _compile(mnemonic: string, operand: string): Instruction[] {
 		switch (mnemonic) {
 			case 'nop':
-				return { opcode: Opcode.NOP, operand: -1 };
+				return [{ opcode: Opcode.NOP, operand: -1 }];
 			case 'work':
-				return { opcode: Opcode.WORK, operand: parseInt(operand) };
+				const amount = parseInt(operand);
+				return new Array(amount).fill({ opcode: Opcode.WORK, operand: -1 });
 			case 'io':
-				return { opcode: Opcode.IO, operand: parseInt(operand) };
+				return [{ opcode: Opcode.IO, operand: parseInt(operand) }];
+			case 'exit':
+				return [{ opcode: Opcode.EXIT, operand: -1 }];
 			default:
 				throw new Error(`Unrecognized mnemonic ${mnemonic}`);
 		}

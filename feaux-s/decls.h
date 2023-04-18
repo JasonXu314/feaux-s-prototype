@@ -4,106 +4,102 @@
 #include <emscripten.h>
 
 #include <list>
+#include <map>
 #include <queue>
+#include <string>
 
-struct Process;
-struct IOEvent;
+struct PCB;
 struct IOInterrupt;
-class IOModule;
+class Interrupt;
+class CPU;
+class IODevice;
 
 #define exported EMSCRIPTEN_KEEPALIVE
 #define NUM_LEVELS 6
 typedef unsigned int uint;
 
-enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, IO_REQUEST, COMPLETE };
+enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL };
 enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
 enum State { ready, processing, blocked, done };  // Used to track the process states
-enum Opcode { NOP, WORK, IO };
-
-struct ProcessCompat {
-	ProcessCompat()
-		: id(-1),
-		  name(nullptr),
-		  arrivalTime(-1),
-		  doneTime(-1),
-		  reqProcessorTime(-1),
-		  processorTime(-1),
-		  state(State::ready),
-		  numIOEvents(-1),
-		  ioEvents(nullptr) {}
-
-	uint id;
-	const char* name;
-	long arrivalTime;
-	long doneTime;
-	long reqProcessorTime;
-	long processorTime;
-	State state;
-	uint numIOEvents;
-	IOEvent* ioEvents;
-};
-
-struct MachineState {
-	uint8_t numCores;
-	uint clockDelay;
-	bool* available;
-	Process** runningProcess;
-};
-
-struct MachineStateCompat {
-	uint8_t numCores;
-	uint clockDelay;
-	bool* available;
-	ProcessCompat* runningProcess;
-};
-class SJFComparator {
-public:
-	bool operator()(Process* a, Process* b);
-};
-
-class SRTComparator {
-public:
-	bool operator()(Process* a, Process* b);
-};
-
-struct OSState {
-	std::list<Process*> processList;
-	std::list<IOInterrupt> interrupts;
-	std::queue<Process*> fifoReadyList;
-	std::priority_queue<Process*, std::vector<Process*>, SJFComparator> sjfReadyList;
-	std::priority_queue<Process*, std::vector<Process*>, SRTComparator> srtReadyList;
-	std::queue<Process*>* mlfLists;
-	std::list<Process*> reentryList;
-	StepAction* stepAction;
-	uint time;
-	bool paused;
-	SchedulingStrategy strategy;
-	IOModule* ioModule;
-};
-
-struct OSStateCompat {
-	uint numProcesses;
-	ProcessCompat* processList;
-	uint numInterrupts;
-	IOInterrupt* interrupts;
-	uint numReady;
-	ProcessCompat* readyList;
-	uint numReentering;
-	ProcessCompat* reentryList;
-	StepAction* stepAction;
-	uint time;
-	bool paused;
-	uint mlfNumReady[NUM_LEVELS];
-	ProcessCompat* mlfReadyLists[NUM_LEVELS] = {nullptr};
-};
+enum Opcode { NOP, WORK, IO, EXIT };
+enum InterruptType { IO_COMPLETION };
+enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT };
 
 struct Instruction {
 	uint8_t opcode;
 	uint8_t operand;
 };
 
-extern MachineState* machineState;
+struct Program {
+	Program() : name(""), length(0), instructions(nullptr) {}
+	Program(const std::string& name, uint length, Instruction* instructions) : name(name), length(length), instructions(instructions) {}
+	Program(const Program& other) : name(other.name), length(other.length), instructions(new Instruction[other.length]) {
+		for (uint i = 0; i < length; i++) {
+			instructions[i] = other.instructions[i];
+		}
+	}
+
+	std::string name;
+	uint length;
+	Instruction* instructions;
+
+	bool operator<(const Program& other) { return name < other.name; }
+
+	~Program() { delete[] instructions; }
+};
+
+struct Registers {
+	// Pointer to next instruction
+	uint rip;
+
+	// Argument registers
+	uint rdi;
+};
+
+struct IORequest {
+	uint pid;
+	uint duration;
+};
+
+struct MachineState {
+	uint8_t numCores;
+	uint8_t numIODevices;
+	uint clockDelay;
+	CPU** cores;
+	IODevice** ioDevices;
+};
+
+class SJFComparator {
+public:
+	bool operator()(PCB* a, PCB* b);
+};
+
+class SRTComparator {
+public:
+	bool operator()(PCB* a, PCB* b);
+};
+
+struct OSState {
+	std::list<PCB*> processList;
+	std::list<Interrupt*> interrupts;
+	std::queue<PCB*> fifoReadyList;
+	std::priority_queue<PCB*, std::vector<PCB*>, SJFComparator> sjfReadyList;
+	std::priority_queue<PCB*, std::vector<PCB*>, SRTComparator> srtReadyList;
+	std::queue<PCB*>* mlfLists;
+	std::list<PCB*> reentryList;
+	std::queue<IORequest> pendingRequests;
+	StepAction* stepAction;
+	Syscall* pendingSyscalls;
+	PCB** runningProcess;
+	uint time;
+	bool paused;
+	SchedulingStrategy strategy;
+	std::map<std::string, Program> programs;
+};
+
+extern MachineState* machine;
 extern OSState* state;
 extern uint nextPID;
+extern const Registers NOPROC;
 
 #endif
