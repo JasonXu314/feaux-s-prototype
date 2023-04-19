@@ -113,6 +113,9 @@ void exported unpause();
 // Set the clock delay of the simulated machine (in ms) (ie. the time between ticks)
 void exported setClockDelay(uint delay);
 
+void exported setNumCores(uint8_t cores);
+void exported setNumIODevices(uint8_t ioDevices);
+
 // Set the scheduling strategy of the OS
 // Needs to reboot OS, so will lose all processes (but keeps programs)
 void exported setSchedulingStrategy(SchedulingStrategy strategy);

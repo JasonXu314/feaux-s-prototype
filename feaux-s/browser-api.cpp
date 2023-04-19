@@ -73,6 +73,34 @@ void exported pause() { state->paused = true; }
 void exported unpause() { state->paused = false; }
 void exported setClockDelay(uint delay) { machine->clockDelay = delay; }
 
+void exported setNumCores(uint8_t cores) {
+	map<string, Program> programs = state->programs;
+	SchedulingStrategy strategy = state->strategy;
+	uint8_t numIODevices = machine->numIODevices;
+	uint clockDelay = machine->clockDelay;
+	cleanupOS();
+	cleanupMachine();
+
+	initMachine(cores, numIODevices);
+	machine->clockDelay = clockDelay;
+	initOS(machine->numCores, strategy);
+	state->programs = programs;
+}
+
+void exported setNumIODevices(uint8_t ioDevices) {
+	map<string, Program> programs = state->programs;
+	SchedulingStrategy strategy = state->strategy;
+	uint8_t numCores = machine->numCores;
+	uint clockDelay = machine->clockDelay;
+	cleanupOS();
+	cleanupMachine();
+
+	initMachine(numCores, ioDevices);
+	machine->clockDelay = clockDelay;
+	initOS(machine->numCores, strategy);
+	state->programs = programs;
+}
+
 void exported setSchedulingStrategy(SchedulingStrategy strategy) {
 	map<string, Program> programs = state->programs;  // Save a copy of the programs, so that the new OS will still have the same programs
 	cleanupOS();

@@ -19,10 +19,8 @@ EM_JS(void, jssleep, (int milis), { Asyncify.handleSleep(wakeUp => { setTimeout(
 
 // The kernel of our "OS"
 int main() {
-	PRINT_SIZE(Instruction);
+	PRINT_SIZE(CPUState);
 	PRINT_SIZE(Registers);
-	PRINT_SIZE(OSStateCompat);
-	PRINT_SIZE(ProcessCompat);
 
 	initMachine(2, 1);
 	initOS(machine->numCores, SchedulingStrategy::FIFO);

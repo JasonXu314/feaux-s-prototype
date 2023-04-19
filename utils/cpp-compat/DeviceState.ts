@@ -13,7 +13,7 @@ export class DeviceState {
 		if (count === undefined) {
 			const state = new DeviceState();
 
-			state._pid = memory.readUint32(ptr);
+			state._pid = memory.readUint8(ptr);
 			state._duration = memory.readInt32(ptr + 4);
 			state._progress = memory.readInt32(ptr + 8);
 

@@ -271,6 +271,36 @@ export class OSEngine {
 		this.wasmEngine.loadProgram(instructionList, name);
 	}
 
+	public setNumCores(cores: number): void {
+		this.wasmEngine.setNumCores(cores);
+
+		this.cpuIndicators.forEach((cpu) => this.entities.splice(this.entities.indexOf(cpu), 1));
+		this.cpuIndicators.splice(0, this.cpuIndicators.length);
+		this._numCPUIndicators = 0;
+
+		for (; this._numCPUIndicators < cores; this._numCPUIndicators++) {
+			const indicator = new CPUIndicator(this._numCPUIndicators);
+
+			this.cpuIndicators.push(indicator);
+			this.entities.push(indicator);
+		}
+	}
+
+	public setNumIODevices(ioDevices: number): void {
+		this.wasmEngine.setNumIODevices(ioDevices);
+
+		this.ioDeviceIndicators.forEach((device) => this.entities.splice(this.entities.indexOf(device), 1));
+		this.ioDeviceIndicators.splice(0, this.ioDeviceIndicators.length);
+		this._numIODeviceIndicators = 0;
+
+		for (; this._numIODeviceIndicators < ioDevices; this._numIODeviceIndicators++) {
+			const indicator = new IODeviceIndicator(this._numIODeviceIndicators);
+
+			this.ioDeviceIndicators.push(indicator);
+			this.entities.push(indicator);
+		}
+	}
+
 	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
 		if (this._schedulingStrategy !== strategy) {
 			this._schedulingStrategy = strategy;

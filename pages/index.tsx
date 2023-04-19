@@ -24,6 +24,8 @@ const Index: NextPage = () => {
 	const [programName, setProgramName] = useState<string>('');
 	const [programCode, setProgramCode] = useState<string>('');
 	const [schedulingStrategy, setSchedulingStrategy] = useState<SchedulingStrategy>(SchedulingStrategy.FIFO);
+	const [numCores, setNumCores] = useState<number>(2);
+	const [numIODevices, setNumIODevices] = useState<number>(1);
 
 	useEffect(() => {
 		if (osEngine) {
@@ -86,11 +88,39 @@ const Index: NextPage = () => {
 				/>
 				<Button label="Create&nbsp;Program" icon="pi pi-plus" className="flex-none" onClick={() => setWritingProgram(!writingProgram)} />
 				<div className="flex align-items-center gap-2">
+					<label className="font-bold">Machine&nbsp;Specs</label>
+					<InputNumber
+						suffix=" cores"
+						showButtons
+						inputStyle={{ maxWidth: '10em' }}
+						value={numCores}
+						onValueChange={(evt) => {
+							if (evt.value) {
+								setNumCores(evt.value);
+								osEngine?.setNumCores(evt.value);
+							}
+						}}
+					/>
+					<InputNumber
+						suffix=" I/O Devices"
+						showButtons
+						inputStyle={{ maxWidth: '10em' }}
+						value={numIODevices}
+						onValueChange={(evt) => {
+							if (evt.value) {
+								setNumIODevices(evt.value);
+								osEngine?.setNumIODevices(evt.value);
+							}
+						}}
+					/>
+				</div>
+				<div className="flex align-items-center gap-2">
 					<label htmlFor="clock-delay" className="font-bold">
 						Clock&nbsp;Delay
 					</label>
 					<InputNumber
 						inputId="clock-delay"
+						suffix="ms"
 						value={clockDelay}
 						onValueChange={(evt) => {
 							if (evt.value) {

@@ -29,6 +29,8 @@ export interface WASMModule {
 		unpause(): void;
 		setClockDelay(delay: number): void;
 		setSchedulingStrategy(strategy: SchedulingStrategy): void;
+		setNumCores(cores: number): void;
+		setNumIODevices(ioDevices: number): void;
 	};
 }
 
@@ -77,6 +79,8 @@ export class WASMEngine {
 		const cores = CPUState.readFrom(this.memory, this.memory.readUint32(ptr + 8), numCores);
 
 		const ioDevices = DeviceState.readFrom(this.memory, this.memory.readUint32(ptr + 12), numIODevices);
+
+		// console.log(numCores, numIODevices, cores, ioDevices);
 
 		return {
 			numCores,
@@ -153,6 +157,14 @@ export class WASMEngine {
 
 	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
 		this.module.asm.setSchedulingStrategy(strategy);
+	}
+
+	public setNumCores(cores: number): void {
+		this.module.asm.setNumCores(cores);
+	}
+
+	public setNumIODevices(ioDevices: number): void {
+		this.module.asm.setNumIODevices(ioDevices);
 	}
 }
 

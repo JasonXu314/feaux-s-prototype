@@ -114,4 +114,5 @@ void cleanupMachine() {
 		delete machine->ioDevices[i];
 	}
 	delete[] machine->ioDevices;
+	delete machine;
 }

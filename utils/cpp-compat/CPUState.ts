@@ -14,7 +14,7 @@ export class CPUState {
 		if (count === undefined) {
 			const state = new CPUState();
 
-			state._available = memory.readUint32(ptr) === 1;
+			state._available = memory.readUint8(ptr) === 1;
 			state._regstate = Regs.readFrom(memory, ptr + 4);
 
 			return state;
