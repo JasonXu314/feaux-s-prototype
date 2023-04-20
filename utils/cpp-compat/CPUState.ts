@@ -1,12 +1,11 @@
 import { Memory } from '../Memory';
-import { DEF_REGSTATE, Registers } from '../types';
-import { Registers as Regs } from './Registers';
+import { Registers } from './Registers';
 
 export class CPUState {
-	public static readonly SIZE = 4 + Regs.SIZE;
+	public static readonly SIZE = 4 + Registers.SIZE;
 
 	private _available: boolean = false;
-	private _regstate: Registers = DEF_REGSTATE;
+	private _regstate: Registers = Registers.DEF_REGSTATE;
 
 	public static readFrom(memory: Memory, ptr: number): CPUState;
 	public static readFrom(memory: Memory, ptr: number, count: number): CPUState[];
@@ -15,7 +14,7 @@ export class CPUState {
 			const state = new CPUState();
 
 			state._available = memory.readUint8(ptr) === 1;
-			state._regstate = Regs.readFrom(memory, ptr + 4);
+			state._regstate = Registers.readFrom(memory, ptr + 4);
 
 			return state;
 		} else {

@@ -3,7 +3,29 @@ import { CPUState } from './cpp-compat/CPUState';
 import { DeviceState } from './cpp-compat/DeviceState';
 import { IORequest } from './cpp-compat/IORequest';
 import { Process } from './cpp-compat/Process';
-import { IOInterrupt, Instruction, MachineState, OSState, Ptr, SchedulingStrategy } from './types';
+import { IOInterrupt, Instruction, Opcode, Ptr, SchedulingStrategy, StepAction, Syscall } from './types';
+
+export type OSState = {
+	processList: Process[];
+	interrupts: IOInterrupt[];
+	readyList: Process[];
+	reentryList: Process[];
+	stepAction: StepAction[];
+	time: number;
+	paused: boolean;
+	mlfReadyLists: Process[][];
+	pendingRequests: IORequest[];
+	pendingSyscalls: Syscall[];
+	runningProcesses: Process[];
+};
+
+export type MachineState = {
+	numCores: number;
+	numIODevices: number;
+	clockDelay: number;
+	cores: CPUState[];
+	ioDevices: DeviceState[];
+};
 
 export interface WASMModule {
 	HEAP8: Int8Array;
@@ -18,6 +40,7 @@ export interface WASMModule {
 		memory: WebAssembly.Memory;
 
 		loadProgram(instructionList: Ptr<Instruction[]>, size: number, name: Ptr<string>): void;
+		getProgramLocation(name: number): number;
 		spawn(name: Ptr<string>): number;
 		allocInstructionList(size: number): Ptr<Instruction[]>;
 		allocString(size: number): Ptr<string>;
@@ -45,7 +68,13 @@ export class WASMEngine {
 		const ilPtr = this.module.asm.allocInstructionList(instructionList.length);
 		instructionList.forEach((instruction, i) => {
 			this.memory.writeUint32(ilPtr + i * 12, instruction.opcode);
-			this.memory.writeUint32(ilPtr + i * 12 + 4, instruction.operand1);
+
+			if (instruction.opcode === Opcode.JL) {
+				this.memory.writeInt32(ilPtr + i * 12 + 4, instruction.operand1);
+			} else {
+				this.memory.writeUint32(ilPtr + i * 12 + 4, instruction.operand1);
+			}
+
 			this.memory.writeUint32(ilPtr + i * 12 + 8, instruction.operand2);
 		});
 
@@ -165,6 +194,17 @@ export class WASMEngine {
 
 	public setNumIODevices(ioDevices: number): void {
 		this.module.asm.setNumIODevices(ioDevices);
+	}
+
+	public getProgramStart(name: string): number {
+		const strPtr = this.module.asm.allocString(name.length);
+		this.memory.writeString(strPtr, name);
+
+		const result = this.module.asm.getProgramLocation(strPtr);
+
+		this.module.asm.freeString(strPtr);
+
+		return result;
 	}
 }
 

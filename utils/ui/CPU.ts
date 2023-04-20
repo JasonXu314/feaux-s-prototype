@@ -2,12 +2,15 @@ import { Entity } from '../Entity';
 import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
-import { Process } from '../types';
+import { Process } from '../cpp-compat/Process';
+import { Registers } from '../cpp-compat/Registers';
 import { STATUS_COLORS, prettyState } from '../utils';
 
 interface CPUData {
 	available: boolean;
+	registers: Registers;
 	process: Process | null;
+	programStart: number;
 }
 
 const WIDTH = 315,
@@ -41,7 +44,7 @@ export class CPUIndicator extends Entity {
 		} else {
 			const progressBarWidth = WIDTH * 0.9;
 			const yOffset = -HEIGHT / 2 + 40;
-			const progressWidth = progressBarWidth * (data.process!.processorTime / data.process!.reqProcessorTime);
+			const progressWidth = progressBarWidth * ((data.registers.rip - data.programStart) / 12 / data.process!.reqProcessorTime);
 
 			renderEngine.fillRect(this.center.add(new Point(5 - progressBarWidth / 2 + progressWidth / 2, yOffset)), progressWidth, 25, 'green');
 			renderEngine.rect(this.center.add(new Point(5, yOffset)), progressBarWidth, 25, 'black');

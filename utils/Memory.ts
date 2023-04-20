@@ -25,6 +25,10 @@ export class Memory {
 		return this.dv.getInt32(offset, true);
 	}
 
+	public writeInt32(offset: number, value: number): void {
+		this.dv.setInt32(offset, value, true);
+	}
+
 	public readString(ptr: number): string {
 		let str = '',
 			i = 0,

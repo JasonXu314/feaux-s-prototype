@@ -29,14 +29,14 @@ enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
 // The states a process can be in
 enum State { ready, processing, blocked, done };
 // The opcodes for CPU instructions
-enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE };
+enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE, ALLOC, SW, CMP, JL, INC, ADD };
 // The available x86-64 registers (yes i know in my imiplementation they're 32-bit, not 64-bit,
 // but WASM interacts weirdly with unsigned long longs for some reason)
 enum Regs { RAX, RCX, RDX, RBX, RSI, RDI, RSP, RBP, R8, R9, R10, R11, R12, R13, R14, R15 };
 // The types of interrupt that can occur
 enum InterruptType { IO_COMPLETION };
 // The syscalls available to processes
-enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT };
+enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT, SYS_ALLOC };
 
 // A CPU instruction
 struct Instruction {
@@ -71,10 +71,14 @@ struct Program {
 	~Program() { delete[] instructions; }
 };
 
+#define FLAG_CY 0x0001
+#define FLAG_ZF 0x0040
+
 // The current register state (of a process or CPU)
 struct Registers {
-	// Pointer to next instruction
-	uint rip;  // Instruction pointer
+	// Status registers
+	uint rip;	 // Instruction pointer
+	uint flags;	 // Flags register (https://en.wikipedia.org/wiki/FLAGS_register) (yes, i know its only 32 bit because uint)
 
 	// GPRs
 	uint rax;  // %rax

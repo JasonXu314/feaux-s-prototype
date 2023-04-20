@@ -1,9 +1,11 @@
 import { Memory } from '../Memory';
 
 export class Registers {
-	public static readonly SIZE = 68;
+	public static readonly SIZE = 72;
+	public static readonly DEF_REGSTATE = new Registers();
 
 	private _rip: number = -1;
+	private _flags: number = -1;
 	private _rax: number = -1;
 	private _rcx: number = -1;
 	private _rdx: number = -1;
@@ -28,22 +30,23 @@ export class Registers {
 			const regs = new Registers();
 
 			regs._rip = memory.readUint32(ptr);
-			regs._rax = memory.readUint32(ptr + 4);
-			regs._rcx = memory.readUint32(ptr + 8);
-			regs._rdx = memory.readUint32(ptr + 12);
-			regs._rbx = memory.readUint32(ptr + 16);
-			regs._rsi = memory.readUint32(ptr + 20);
-			regs._rdi = memory.readUint32(ptr + 24);
-			regs._rsp = memory.readUint32(ptr + 28);
-			regs._rbp = memory.readUint32(ptr + 32);
-			regs._r8 = memory.readUint32(ptr + 36);
-			regs._r9 = memory.readUint32(ptr + 40);
-			regs._r10 = memory.readUint32(ptr + 44);
-			regs._r11 = memory.readUint32(ptr + 48);
-			regs._r12 = memory.readUint32(ptr + 52);
-			regs._r13 = memory.readUint32(ptr + 56);
-			regs._r14 = memory.readUint32(ptr + 60);
-			regs._r15 = memory.readUint32(ptr + 64);
+			regs._flags = memory.readUint32(ptr + 4);
+			regs._rax = memory.readUint32(ptr + 8);
+			regs._rcx = memory.readUint32(ptr + 12);
+			regs._rdx = memory.readUint32(ptr + 16);
+			regs._rbx = memory.readUint32(ptr + 20);
+			regs._rsi = memory.readUint32(ptr + 24);
+			regs._rdi = memory.readUint32(ptr + 28);
+			regs._rsp = memory.readUint32(ptr + 32);
+			regs._rbp = memory.readUint32(ptr + 36);
+			regs._r8 = memory.readUint32(ptr + 40);
+			regs._r9 = memory.readUint32(ptr + 44);
+			regs._r10 = memory.readUint32(ptr + 48);
+			regs._r11 = memory.readUint32(ptr + 52);
+			regs._r12 = memory.readUint32(ptr + 56);
+			regs._r13 = memory.readUint32(ptr + 60);
+			regs._r14 = memory.readUint32(ptr + 64);
+			regs._r15 = memory.readUint32(ptr + 68);
 
 			return regs;
 		} else {
@@ -53,6 +56,10 @@ export class Registers {
 
 	public get rip(): number {
 		return this._rip;
+	}
+
+	public get flags(): number {
+		return this._flags;
 	}
 
 	public get rdi(): number {

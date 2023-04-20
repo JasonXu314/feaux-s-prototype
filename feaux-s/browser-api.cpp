@@ -29,6 +29,8 @@ void exported loadProgram(Instruction* instructionList, uint size, char* name) {
 	state->programs.emplace(name, newProgram);
 }
 
+Instruction* exported getProgramLocation(char* name) { return state->programs.at(name).instructions; }
+
 uint exported spawn(char* name) {
 	if (state->programs.count(name)) {	// If there exists a program of that name
 		Program& program = state->programs.at(name);
@@ -40,6 +42,8 @@ uint exported spawn(char* name) {
 		proc->level = 0;
 		proc->processorTimeOnLevel = 0;
 		proc->state = ready;
+
+		memset(&proc->regstate, 0, sizeof(Registers));
 		proc->regstate.rip = (uint)program.instructions;  // Loads the address of the first instruction into the instruction pointer of the process
 		proc->regstate.rdi = 0;
 		proc->reqProcessorTime = program.length - 1;

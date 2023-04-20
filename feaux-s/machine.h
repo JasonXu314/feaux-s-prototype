@@ -26,6 +26,10 @@ public:
 
 	friend void exportCPU(const CPU& src, CPUState& dest);
 
+	// The kernel is your friend :D
+	// but only use this power sparingly
+	friend int main();
+
 private:
 	uint8_t _id;
 	Instruction* _instruction;

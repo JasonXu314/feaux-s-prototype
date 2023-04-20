@@ -1,6 +1,8 @@
 #ifndef BROWSER_API_H
 #define BROWSER_API_H
 
+#include <string.h>
+
 #include "decls.h"
 #include "utils.h"
 
@@ -100,6 +102,9 @@ void exported freeString(char* str);
 // Note that the instruction list and name should have been earlier alloc'd and written to, and should be later freed (by the caller)
 // This function does not free the instruction list/name
 void exported loadProgram(Instruction* instructionList, uint size, char* name);
+
+// Gets the memory address where a program's instructions are stored (for monitoring progress since loops are a thing)
+Instruction* exported getProgramLocation(char* name);
 
 // Spawns a process with the program specified by the given name
 uint exported spawn(char* name);

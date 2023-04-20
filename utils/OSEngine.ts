@@ -232,7 +232,9 @@ export class OSEngine {
 				this.cpuIndicators.forEach((cpu, i) =>
 					cpu.render(this.renderEngine, {
 						available: machineState.cores[i].available,
-						process: machineState.cores[i].available ? null : osState.runningProcesses[i]
+						registers: machineState.cores[i].regstate,
+						process: machineState.cores[i].available ? null : osState.runningProcesses[i],
+						programStart: !machineState.cores[i].available ? this.wasmEngine.getProgramStart(osState.runningProcesses[i].name) : -1
 					})
 				);
 				this.ioDeviceIndicators.forEach((device, i) => device.render(this.renderEngine, machineState.ioDevices[i]));
@@ -257,15 +259,41 @@ export class OSEngine {
 	}
 
 	public compileProgram(name: string, code: string): void {
-		const instructionList = code.split('\n').reduce<Instruction[]>((instructions, line) => {
-			const [mnemonic, operand1, operand2] = line.split(' ');
+		const labelTable: Map<string, number> = new Map(),
+			labels: string[] = [];
 
-			return [...instructions, ...this._compile(mnemonic, operand1, operand2)];
+		// Find all the labels that appear in the code (because jumps may reference labels further down in the code)
+		code.split('\n').forEach((line) => {
+			let matches;
+			if ((matches = line.match(/^(\w+):$/))) {
+				labels.push(matches[1]);
+			}
+		});
+
+		// Now compile instructions
+		const instructionList = code.split('\n').reduce<Instruction[]>((instructions, line) => {
+			let matches;
+			if ((matches = line.match(/^(\w+):$/))) {
+				labelTable.set(matches[1], instructions.length);
+				return instructions;
+			} else {
+				const [mnemonic, operand1, operand2] = line.split(' ');
+
+				return [...instructions, ...this._compile(mnemonic, operand1, operand2, labels)];
+			}
 		}, []);
 
+		// Post-processing
 		if (instructionList.at(-1)?.opcode !== Opcode.EXIT) {
+			// If the user (was an idiot and) did not include an exit instruction at the end, append it
 			instructionList.push({ opcode: Opcode.EXIT, operand1: -1, operand2: -1 });
 		}
+		// Resolve jumps for labels
+		instructionList.forEach((instruction, i) => {
+			if (instruction.opcode === Opcode.JL) {
+				instruction.operand1 = (labelTable.get(labels[instruction.operand1])! - i) * 12;
+			}
+		});
 
 		this.programs.set(name, instructionList);
 		this.wasmEngine.loadProgram(instructionList, name);
@@ -316,7 +344,7 @@ export class OSEngine {
 			.catch((err) => console.error(`Error loading default program ${name}`, err));
 	}
 
-	private _compile(mnemonic: string, operand1: string, operand2: string): Instruction[] {
+	private _compile(mnemonic: string, operand1: string, operand2: string, labels: string[]): Instruction[] {
 		switch (mnemonic) {
 			case 'nop':
 				return [{ opcode: Opcode.NOP, operand1: -1, operand2: -1 }];
@@ -331,6 +359,27 @@ export class OSEngine {
 				return [{ opcode: Opcode.MOVE, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
 			case 'exit':
 				return [{ opcode: Opcode.EXIT, operand1: -1, operand2: -1 }];
+			case 'alloc':
+				return [
+					{ opcode: Opcode.LOAD, operand1: parseInt(operand1), operand2: getRegister('rdi') },
+					{ opcode: Opcode.LOAD, operand1: getRegister(operand2), operand2: getRegister('rsi') },
+					{ opcode: Opcode.ALLOC, operand1: -1, operand2: -1 }
+				];
+			case 'sw':
+				return [{ opcode: Opcode.SW, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
+			case 'cmp':
+				return [{ opcode: Opcode.CMP, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
+			case 'jl':
+				const jumpLocation = labels.indexOf(operand1);
+				if (jumpLocation === -1) {
+					throw new Error(`Unknown label ${operand1}`);
+				}
+
+				return [{ opcode: Opcode.JL, operand1: jumpLocation, operand2: -1 }];
+			case 'inc':
+				return [{ opcode: Opcode.INC, operand1: getRegister(operand1), operand2: -1 }];
+			case 'add':
+				return [{ opcode: Opcode.ADD, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
 			default:
 				throw new Error(`Unrecognized mnemonic ${mnemonic}`);
 		}

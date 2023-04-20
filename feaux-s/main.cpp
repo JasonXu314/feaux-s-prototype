@@ -251,6 +251,13 @@ int main() {
 								runningProcess->doneTime = state->time;
 								runningProcess->regstate = machine->cores[core]->regstate();
 								break;
+							case Syscall::SYS_ALLOC:  // TODO: do note that everything here causes leaks because i havent implemented SYS_FREE yet lol
+								uint size = machine->cores[core]->regstate().rdi, destRegister = machine->cores[core]->regstate().rsi;
+								char* memory = new char[size];
+
+								uint* dest = getRegister(machine->cores[core]->_registers, (Regs)destRegister);
+								*dest = (uint)memory;
+								break;
 						}
 
 						runningProcess->processorTime++;

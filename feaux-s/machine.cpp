@@ -46,6 +46,47 @@ void CPU::tick() {
 			case Opcode::EXIT:
 				state->pendingSyscalls[_id] = Syscall::SYS_EXIT;
 				break;
+			case Opcode::ALLOC:
+				state->pendingSyscalls[_id] = Syscall::SYS_ALLOC;
+				break;
+			case Opcode::SW: {
+				uint8_t data = *getRegister(_registers, (Regs)_instruction->operand1),
+						*loc = (uint8_t*)*getRegister(_registers, (Regs)_instruction->operand2);
+
+				*loc = data;
+				break;
+			}
+			case Opcode::CMP: {
+				uint a = *getRegister(_registers, (Regs)_instruction->operand1), b = *getRegister(_registers, (Regs)_instruction->operand2);
+
+				_registers.flags &= (~FLAG_CY & ~FLAG_ZF);
+				if (a == b) {
+					_registers.flags |= (FLAG_CY | FLAG_ZF);
+				} else if (a < b) {
+					_registers.flags |= FLAG_CY;
+				}
+				break;
+			}
+			case Opcode::JL: {
+				if (_registers.flags & FLAG_CY && !(_registers.flags & FLAG_ZF)) {
+					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
+					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
+				} else {
+				}
+				break;
+			}
+			case Opcode::INC: {
+				uint* loc = getRegister(_registers, (Regs)_instruction->operand1);
+
+				(*loc)++;
+				break;
+			}
+			case Opcode::ADD: {
+				uint *src = getRegister(_registers, (Regs)_instruction->operand1), *dest = getRegister(_registers, (Regs)_instruction->operand2);
+
+				*dest += *src;
+				break;
+			}
 		}
 	}
 }

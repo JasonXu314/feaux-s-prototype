@@ -32,7 +32,13 @@ export enum Opcode {
 	IO,
 	EXIT,
 	LOAD,
-	MOVE
+	MOVE,
+	ALLOC,
+	SW,
+	CMP,
+	JL,
+	INC,
+	ADD
 }
 
 export enum InterruptType {
@@ -120,21 +126,6 @@ export const DEF_REGSTATE = {
 	r15: -1
 };
 
-export type Process = {
-	pid: number;
-	name: string;
-	arrivalTime: number;
-	doneTime: number;
-	reqProcessorTime: number;
-	processorTime: number;
-	state: ProcessState;
-};
-
-export type CPUState = {
-	available: boolean;
-	regstate: Registers;
-};
-
 export type DeviceState = {
 	pid: number;
 	duration: number;
@@ -152,27 +143,5 @@ export type RawProcess = {
 	processorTimeOnLevel: number;
 	state: ProcessState;
 	regstate: Registers;
-};
-
-export type MachineState = {
-	numCores: number;
-	numIODevices: number;
-	clockDelay: number;
-	cores: CPUState[];
-	ioDevices: DeviceState[];
-};
-
-export type OSState = {
-	processList: Process[];
-	interrupts: IOInterrupt[];
-	readyList: Process[];
-	reentryList: Process[];
-	stepAction: StepAction[];
-	time: number;
-	paused: boolean;
-	mlfReadyLists: Process[][];
-	pendingRequests: IORequest[];
-	pendingSyscalls: Syscall[];
-	runningProcesses: Process[];
 };
 
