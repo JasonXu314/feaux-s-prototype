@@ -243,6 +243,12 @@ int main() {
 										machine->ioDevices[freeDevice]->handle(req);
 									}
 								}
+
+								runningProcess->processorTime++;
+								runningProcess = nullptr;
+								state->runningProcess[core] = nullptr;
+								machine->cores[core]->load(NOPROC);
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
 								break;
 							}
 							case Syscall::SYS_EXIT:
@@ -250,21 +256,36 @@ int main() {
 								runningProcess->state = done;
 								runningProcess->doneTime = state->time;
 								runningProcess->regstate = machine->cores[core]->regstate();
+
+								runningProcess->processorTime++;
+								runningProcess = nullptr;
+								state->runningProcess[core] = nullptr;
+								machine->cores[core]->load(NOPROC);
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
 								break;
-							case Syscall::SYS_ALLOC:  // TODO: do note that everything here causes leaks because i havent implemented SYS_FREE yet lol
+							case Syscall::SYS_ALLOC: {
 								uint size = machine->cores[core]->regstate().rdi, destRegister = machine->cores[core]->regstate().rsi;
 								char* memory = new char[size];
 
 								uint* dest = getRegister(machine->cores[core]->_registers, (Regs)destRegister);
 								*dest = (uint)memory;
-								break;
-						}
+								machine->cores[core]->_registers.rax = size;
 
-						runningProcess->processorTime++;
-						runningProcess = nullptr;
-						state->runningProcess[core] = nullptr;
-						machine->cores[core]->load(NOPROC);
-						state->pendingSyscalls[core] = Syscall::SYS_NONE;
+								runningProcess->processorTime++;
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
+								break;
+							}
+							case Syscall::SYS_FREE: {
+								char* ptr = (char*)*getRegister(machine->cores[core]->_registers, (Regs)machine->cores[core]->regstate().rdi);
+
+								delete[] ptr;
+								machine->cores[core]->_registers.rax = 0;
+
+								runningProcess->processorTime++;
+								state->pendingSyscalls[core] = Syscall::SYS_NONE;
+								break;
+							}
+						}
 					} else {
 						cerr << "Debug, core " << core << ": No running process... somehow" << endl;
 						return 1;

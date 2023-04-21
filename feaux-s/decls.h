@@ -29,14 +29,14 @@ enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
 // The states a process can be in
 enum State { ready, processing, blocked, done };
 // The opcodes for CPU instructions
-enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE, ALLOC, SW, CMP, JL, INC, ADD };
+enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE, ALLOC, FREE, SW, CMP, JL, JLE, JE, JGE, JG, INC, ADD };
 // The available x86-64 registers (yes i know in my imiplementation they're 32-bit, not 64-bit,
 // but WASM interacts weirdly with unsigned long longs for some reason)
 enum Regs { RAX, RCX, RDX, RBX, RSI, RDI, RSP, RBP, R8, R9, R10, R11, R12, R13, R14, R15 };
 // The types of interrupt that can occur
 enum InterruptType { IO_COMPLETION };
 // The syscalls available to processes
-enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT, SYS_ALLOC };
+enum Syscall { SYS_NONE, SYS_IO, SYS_EXIT, SYS_ALLOC, SYS_FREE };
 
 // A CPU instruction
 struct Instruction {

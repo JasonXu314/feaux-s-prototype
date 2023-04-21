@@ -21,7 +21,9 @@ const DEFAULT_PROGRAMS: ProgramDescriptor[] = [
 	{ name: 'IO Worker', file: 'io' },
 	{ name: 'More Work + IO', file: 'more-work' },
 	{ name: 'More IO + Work', file: 'more-io' },
-	{ name: 'Very Long Worker', file: 'very-long' }
+	{ name: 'Very Long Worker', file: 'very-long' },
+	{ name: 'Allocate/Deallocate Memory', file: 'allocer' },
+	{ name: 'Loop', file: 'looper' }
 ];
 
 interface EngineEvents {
@@ -365,17 +367,55 @@ export class OSEngine {
 					{ opcode: Opcode.LOAD, operand1: getRegister(operand2), operand2: getRegister('rsi') },
 					{ opcode: Opcode.ALLOC, operand1: -1, operand2: -1 }
 				];
+			case 'free':
+				return [
+					{ opcode: Opcode.LOAD, operand1: getRegister(operand1), operand2: getRegister('rdi') },
+					{ opcode: Opcode.FREE, operand1: 1, operand2: -1 }
+				];
 			case 'sw':
 				return [{ opcode: Opcode.SW, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
 			case 'cmp':
 				return [{ opcode: Opcode.CMP, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
-			case 'jl':
+			case 'jl': {
 				const jumpLocation = labels.indexOf(operand1);
 				if (jumpLocation === -1) {
 					throw new Error(`Unknown label ${operand1}`);
 				}
 
 				return [{ opcode: Opcode.JL, operand1: jumpLocation, operand2: -1 }];
+			}
+			case 'jle': {
+				const jumpLocation = labels.indexOf(operand1);
+				if (jumpLocation === -1) {
+					throw new Error(`Unknown label ${operand1}`);
+				}
+
+				return [{ opcode: Opcode.JLE, operand1: jumpLocation, operand2: -1 }];
+			}
+			case 'je': {
+				const jumpLocation = labels.indexOf(operand1);
+				if (jumpLocation === -1) {
+					throw new Error(`Unknown label ${operand1}`);
+				}
+
+				return [{ opcode: Opcode.JE, operand1: jumpLocation, operand2: -1 }];
+			}
+			case 'jge': {
+				const jumpLocation = labels.indexOf(operand1);
+				if (jumpLocation === -1) {
+					throw new Error(`Unknown label ${operand1}`);
+				}
+
+				return [{ opcode: Opcode.JGE, operand1: jumpLocation, operand2: -1 }];
+			}
+			case 'jg': {
+				const jumpLocation = labels.indexOf(operand1);
+				if (jumpLocation === -1) {
+					throw new Error(`Unknown label ${operand1}`);
+				}
+
+				return [{ opcode: Opcode.JG, operand1: jumpLocation, operand2: -1 }];
+			}
 			case 'inc':
 				return [{ opcode: Opcode.INC, operand1: getRegister(operand1), operand2: -1 }];
 			case 'add':

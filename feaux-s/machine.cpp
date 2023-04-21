@@ -49,6 +49,9 @@ void CPU::tick() {
 			case Opcode::ALLOC:
 				state->pendingSyscalls[_id] = Syscall::SYS_ALLOC;
 				break;
+			case Opcode::FREE:
+				state->pendingSyscalls[_id] = Syscall::SYS_FREE;
+				break;
 			case Opcode::SW: {
 				uint8_t data = *getRegister(_registers, (Regs)_instruction->operand1),
 						*loc = (uint8_t*)*getRegister(_registers, (Regs)_instruction->operand2);
@@ -67,14 +70,31 @@ void CPU::tick() {
 				}
 				break;
 			}
-			case Opcode::JL: {
-				if (_registers.flags & FLAG_CY && !(_registers.flags & FLAG_ZF)) {
+			case Opcode::JL:
+				if (_registers.flags & FLAG_CY && !(_registers.flags & FLAG_ZF))
 					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
 					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
-				} else {
-				}
 				break;
-			}
+			case Opcode::JLE:
+				if (_registers.flags & FLAG_CY)
+					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
+					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
+				break;
+			case Opcode::JE:
+				if (_registers.flags & FLAG_ZF)
+					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
+					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
+				break;
+			case Opcode::JGE:
+				if (!(_registers.flags & FLAG_CY))
+					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
+					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
+				break;
+			case Opcode::JG:
+				if (!(_registers.flags & FLAG_CY) && !(_registers.flags & FLAG_ZF))
+					// subtract sizeof(Instruction) to correct for the fact that we have already advanced the instruction pointer
+					_registers.rip = (_registers.rip - sizeof(Instruction)) + (int)_instruction->operand1;
+				break;
 			case Opcode::INC: {
 				uint* loc = getRegister(_registers, (Regs)_instruction->operand1);
 

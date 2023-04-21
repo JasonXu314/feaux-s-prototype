@@ -34,9 +34,14 @@ export enum Opcode {
 	LOAD,
 	MOVE,
 	ALLOC,
+	FREE,
 	SW,
 	CMP,
 	JL,
+	JLE,
+	JE,
+	JGE,
+	JG,
 	INC,
 	ADD
 }

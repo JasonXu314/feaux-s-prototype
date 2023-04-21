@@ -1,0 +1,7 @@
+ldi 5 rax
+ldi 0 rbx
+loop:
+inc rbx
+cmp rbx rax
+jl loop
+exit

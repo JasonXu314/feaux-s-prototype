@@ -1,0 +1,5 @@
+alloc 10 rcx
+ldi 65 rdx
+sw rdx rcx
+free rcx
+exit
