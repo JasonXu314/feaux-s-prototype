@@ -104,7 +104,31 @@ void CPU::tick() {
 			case Opcode::ADD: {
 				uint *src = getRegister(_registers, (Regs)_instruction->operand1), *dest = getRegister(_registers, (Regs)_instruction->operand2);
 
+				_registers.flags &= (~FLAG_CY & ~FLAG_ZF);
+				if (*dest > numeric_limits<uint>::max() - *src) {
+					if (*src != 0 && *dest == numeric_limits<uint>::max() - *src + 1) {
+						_registers.flags |= FLAG_ZF;
+					}
+
+					_registers.flags |= FLAG_CY;
+				}
+
 				*dest += *src;
+				break;
+			}
+			case Opcode::SUB: {
+				uint *src = getRegister(_registers, (Regs)_instruction->operand1), *dest = getRegister(_registers, (Regs)_instruction->operand2);
+
+				_registers.flags &= (~FLAG_CY & ~FLAG_ZF);
+				if (*dest >= *src) {
+					if (*dest == *src) {
+						_registers.flags |= FLAG_ZF;
+					}
+
+					_registers.flags |= FLAG_CY;
+				}
+
+				*dest -= *src;
 				break;
 			}
 		}

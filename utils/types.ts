@@ -43,7 +43,8 @@ export enum Opcode {
 	JGE,
 	JG,
 	INC,
-	ADD
+	ADD,
+	SUB
 }
 
 export enum InterruptType {

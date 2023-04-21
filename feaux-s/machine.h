@@ -1,6 +1,8 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
+#include <limits>
+
 #include "decls.h"
 #include "signals.h"
 

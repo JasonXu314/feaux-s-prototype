@@ -420,6 +420,8 @@ export class OSEngine {
 				return [{ opcode: Opcode.INC, operand1: getRegister(operand1), operand2: -1 }];
 			case 'add':
 				return [{ opcode: Opcode.ADD, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
+			case 'sub':
+				return [{ opcode: Opcode.SUB, operand1: getRegister(operand1), operand2: getRegister(operand2) }];
 			default:
 				throw new Error(`Unrecognized mnemonic ${mnemonic}`);
 		}
