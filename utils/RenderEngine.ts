@@ -213,6 +213,12 @@ export class RenderEngine {
 		return this.context.measureText(text);
 	}
 
+	public setCursor(cursor: string): void {
+		if (this.canvas.style.cursor !== cursor) {
+			this.canvas.style.cursor = cursor;
+		}
+	}
+
 	public spaceToCanvas(point: Point): Point {
 		return this.norm.add(point.invert('y'));
 	}

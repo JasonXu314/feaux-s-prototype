@@ -1,9 +1,9 @@
 import { Memory } from '../Memory';
-import { DEF_REGSTATE, ProcessState, Registers } from '../types';
-import { Registers as Regs } from './Registers';
+import { ProcessState } from '../types';
+import { Registers } from './Registers';
 
 export class Process {
-	public static readonly SIZE = 36 + Regs.SIZE;
+	public static readonly SIZE = 36 + Registers.SIZE;
 
 	private _pid: number = -1;
 	private _name: string = '';
@@ -14,7 +14,7 @@ export class Process {
 	private _level: number = -1;
 	private _processorTimeOnLevel: number = -1;
 	private _state: ProcessState = ProcessState.READY;
-	private _registers: Registers = DEF_REGSTATE;
+	private _registers: Registers = Registers.DEF_REGSTATE;
 
 	private constructor() {}
 
@@ -33,7 +33,7 @@ export class Process {
 			proc._level = memory.readInt32(ptr + 24);
 			proc._processorTimeOnLevel = memory.readInt32(ptr + 28);
 			proc._state = memory.readUint32(ptr + 32);
-			proc._registers = Regs.readFrom(memory, ptr + 36);
+			proc._registers = Registers.readFrom(memory, ptr + 36);
 
 			return proc;
 		} else {

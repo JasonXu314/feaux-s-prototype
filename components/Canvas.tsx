@@ -1,12 +1,13 @@
-import { memo, useCallback, useRef } from 'react';
+import { MouseEvent, MutableRefObject, memo, useCallback, useRef } from 'react';
 import { OSEngine } from '../utils/OSEngine';
 import { WASMEngine } from '../utils/WASMEngine';
 
 interface Props {
 	onLoad(wasmEngine: WASMEngine, osEngine: OSEngine): void;
+	evtRef: MutableRefObject<MouseEvent<HTMLCanvasElement, globalThis.MouseEvent> | null>;
 }
 
-const Canvas: React.FC<Props> = ({ onLoad }) => {
+const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 	const wasmEngine = useRef<WASMEngine | null>(null);
 	const osEngine = useRef<OSEngine | null>(null);
 
@@ -25,7 +26,7 @@ const Canvas: React.FC<Props> = ({ onLoad }) => {
 		[onLoad]
 	);
 
-	return <canvas height="4800" width="1800" ref={(elem) => elem && setup(elem)} />;
+	return <canvas onContextMenu={(evt) => (evtRef.current = evt)} height="4800" width="1800" ref={(elem) => elem && setup(elem)} />;
 };
 
 export default memo(Canvas, ({ onLoad: prevOnLoad }, { onLoad }) => prevOnLoad === onLoad);

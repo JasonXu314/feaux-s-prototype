@@ -1,16 +1,21 @@
 import { NextPage } from 'next/types';
 import { Button } from 'primereact/button';
+import { ContextMenu } from 'primereact/contextmenu';
 import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { MenuItem } from 'primereact/menuitem';
 import { ToggleButton } from 'primereact/togglebutton';
-import { useCallback, useEffect, useState } from 'react';
+import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Canvas from '../components/Canvas';
-import { OSEngine } from '../utils/OSEngine';
+import { MouseButton, OSEngine } from '../utils/OSEngine';
+import { Point } from '../utils/Point';
 import { WASMEngine } from '../utils/WASMEngine';
 import { SchedulingStrategy } from '../utils/types';
+import { CPUIndicator } from '../utils/ui/CPU';
+import { ProcessIndicator } from '../utils/ui/Process';
 import { prettyStrategy } from '../utils/utils';
 
 const Index: NextPage = () => {
@@ -26,6 +31,9 @@ const Index: NextPage = () => {
 	const [schedulingStrategy, setSchedulingStrategy] = useState<SchedulingStrategy>(SchedulingStrategy.FIFO);
 	const [numCores, setNumCores] = useState<number>(2);
 	const [numIODevices, setNumIODevices] = useState<number>(1);
+	const ctxMenu = useRef<ContextMenu | null>(null);
+	const ctxEvt = useRef<MouseEvent<HTMLCanvasElement, globalThis.MouseEvent> | null>(null);
+	const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
 	useEffect(() => {
 		if (osEngine) {
@@ -49,6 +57,44 @@ const Index: NextPage = () => {
 	const onLoad = useCallback((wasmEngine: WASMEngine, osEngine: OSEngine) => {
 		setWASMEngine(wasmEngine);
 		setOSEngine(osEngine);
+
+		osEngine.on('entityClicked', (entity, { button, spacePos }) => {
+			if (button === MouseButton.RIGHT) {
+				if (entity instanceof CPUIndicator) {
+					setMenuItems([
+						{
+							label: 'View Registers',
+							icon: 'pi pi-fw pi-search',
+							command: () => {
+								osEngine.showCPURegisters(entity.core, spacePos.add(new Point(50, -200)));
+							}
+						}
+					]);
+
+					setTimeout(() => {
+						if (ctxMenu.current) {
+							ctxMenu.current.show(ctxEvt.current!);
+						}
+					}, 0);
+				} else if (entity instanceof ProcessIndicator) {
+					setMenuItems([
+						{
+							label: 'View Registers',
+							icon: 'pi pi-fw pi-search',
+							command: () => {
+								osEngine.showProcessRegisters(entity.pid, spacePos.add(new Point(50, -200)));
+							}
+						}
+					]);
+
+					setTimeout(() => {
+						if (ctxMenu.current) {
+							ctxMenu.current.show(ctxEvt.current!);
+						}
+					}, 0);
+				}
+			}
+		});
 	}, []);
 
 	return (
@@ -131,7 +177,8 @@ const Index: NextPage = () => {
 					/>
 				</div>
 			</div>
-			<Canvas onLoad={onLoad} />
+			<Canvas onLoad={onLoad} evtRef={ctxEvt} />
+			<ContextMenu model={menuItems} ref={ctxMenu} />
 			<Dialog
 				header="Program Editor"
 				visible={writingProgram}

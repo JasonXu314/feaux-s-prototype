@@ -6,7 +6,8 @@ export const STATUS_COLORS = {
 	green: '#56F000',
 	yellow: '#FCE83A',
 	red: '#FF3838',
-	blue: '#2DCCFF'
+	blue: '#2DCCFF',
+	selected: 'rgba(80, 144, 224, 0.5)'
 } as const;
 
 export function prettyState(state: ProcessState): string {
@@ -91,5 +92,12 @@ export function getRegister(reg: string): Regs {
 
 export function height(metrics: TextMetrics): number {
 	return metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent;
+}
+
+export function formatHex(number: number, digits: number): string {
+	let str = number.toString(16);
+	while (str.length < digits) str = '0' + str;
+
+	return '0x' + str;
 }
 

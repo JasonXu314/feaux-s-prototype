@@ -8,6 +8,7 @@ import { IODeviceIndicator } from './ui/IODevice';
 import { MLFReadyListsIndicator } from './ui/MLFReadyLists';
 import { ProcessListIndicator } from './ui/ProcessList';
 import { ReadyListIndicator } from './ui/ReadyList';
+import { RegistersIndicator } from './ui/Registers';
 import { Tab } from './ui/Tab';
 import { getRegister, prettyView } from './utils';
 
@@ -58,6 +59,8 @@ export class OSEngine {
 	private readonly readyListIndicator: ReadyListIndicator = new ReadyListIndicator();
 	private readonly mlfReadyListsIndicator: MLFReadyListsIndicator = new MLFReadyListsIndicator();
 	private readonly processListIndicator: ProcessListIndicator = new ProcessListIndicator();
+	private readonly cpuRegIndicators: RegistersIndicator[] = [];
+	private readonly processRegIndicators: RegistersIndicator[] = [];
 
 	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
@@ -119,6 +122,16 @@ export class OSEngine {
 			this.on('entityClicked', (entity) => {
 				if (entity instanceof Tab) {
 					this._currentView = this.tabs.indexOf(entity);
+				} else if (entity instanceof RegistersIndicator) {
+					if (entity.shouldClose(this._mousePos!)) {
+						if (entity.type === 'cpu') {
+							this.cpuRegIndicators.splice(this.cpuRegIndicators.indexOf(entity), 1);
+							this.entities.splice(this.entities.indexOf(entity), 1);
+						} else {
+							this.processRegIndicators.splice(this.processRegIndicators.indexOf(entity), 1);
+							this.entities.splice(this.entities.indexOf(entity), 1);
+						}
+					}
 				}
 			});
 
@@ -205,6 +218,26 @@ export class OSEngine {
 		this.wasmEngine.spawn(program);
 	}
 
+	public showCPURegisters(core: number, pos: Point): void {
+		if (core >= this._numCPUIndicators || core < 0) {
+			throw new Error('Tried to show registers of nonexistent core');
+		} else {
+			const indicator = new RegistersIndicator(pos, core, 'cpu');
+			this.cpuRegIndicators.push(indicator);
+			this.entities.push(indicator);
+		}
+	}
+
+	public showProcessRegisters(pid: number, pos: Point): void {
+		if (pid - 1 >= this.processListIndicator.length || pid - 1 < 0) {
+			throw new Error(`Tried to show registers of nonexistent process ${pid}`);
+		} else {
+			const indicator = new RegistersIndicator(pos, pid, 'process');
+			this.processRegIndicators.push(indicator);
+			this.entities.push(indicator);
+		}
+	}
+
 	private _tick(): void {
 		this._nextTick = requestAnimationFrame(() => this._tick());
 
@@ -218,6 +251,12 @@ export class OSEngine {
 			this.canvas.style.cursor = 'unset';
 		}
 
+		this.entities.forEach((entity) => {
+			if (entity instanceof RegistersIndicator) {
+				entity.update({ down: this._mouseDown, position: this._mousePos, delta: this._mouseDelta } as MouseData, entity === this._selectedEntity);
+			}
+		});
+
 		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		this.context.fillStyle = 'white';
 		this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -226,20 +265,25 @@ export class OSEngine {
 		const machineState = this.wasmEngine.getMachineState();
 		const osState = this.wasmEngine.getOSState();
 		// console.log(machineState, osState);
+		this.renderEngine.rect(new Point(0, -12.5), this.renderEngine.width - 51, this.renderEngine.height - 49, 'black');
 		this.tabs.forEach((tab, i) => tab.render(this.renderEngine, this._selectedEntity === tab, this._currentView === i));
-		this.renderEngine.rect(new Point(0, -12), this.renderEngine.width - 51, this.renderEngine.height - 51, 'black');
 
 		switch (this._currentView) {
 			case View.HARDWARE:
 				this.cpuIndicators.forEach((cpu, i) =>
-					cpu.render(this.renderEngine, {
-						available: machineState.cores[i].available,
-						registers: machineState.cores[i].regstate,
-						process: machineState.cores[i].available ? null : osState.runningProcesses[i],
-						programStart: !machineState.cores[i].available ? this.wasmEngine.getProgramStart(osState.runningProcesses[i].name) : -1
-					})
+					cpu.render(
+						this.renderEngine,
+						{
+							available: machineState.cores[i].available,
+							registers: machineState.cores[i].regstate,
+							process: machineState.cores[i].available ? null : osState.runningProcesses[i],
+							programStart: !machineState.cores[i].available ? this.wasmEngine.getProgramStart(osState.runningProcesses[i].name) : -1
+						},
+						this._selectedEntity === cpu
+					)
 				);
 				this.ioDeviceIndicators.forEach((device, i) => device.render(this.renderEngine, machineState.ioDevices[i]));
+				this.cpuRegIndicators.forEach((indicator) => indicator.render(this.renderEngine, machineState.cores[indicator.id], this._mousePos));
 				break;
 			case View.PROCESSES:
 				if (this._schedulingStrategy === SchedulingStrategy.MLF) {
@@ -252,6 +296,9 @@ export class OSEngine {
 					selected: this._selectedEntity === this.processListIndicator,
 					mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData
 				});
+				this.processRegIndicators.forEach((indicator) =>
+					indicator.render(this.renderEngine, osState.processList.find((proc) => proc.pid === indicator.id)!, this._mousePos)
+				);
 				break;
 		}
 
@@ -434,6 +481,14 @@ export class OSEngine {
 			for (const entity of reversedEntities) {
 				if (entity.selectedBy(this._mousePos, this._currentView)) {
 					this._selectedEntity = entity;
+
+					if (entity === this.processListIndicator) {
+						const proc = this.processListIndicator.selectedProcess(this._mousePos, this._currentView);
+
+						if (proc) {
+							this._selectedEntity = proc;
+						}
+					}
 					return;
 				}
 			}

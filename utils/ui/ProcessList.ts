@@ -2,12 +2,14 @@ import { Entity, Metadata } from '../Entity';
 import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
-import { Process, ProcessState } from '../types';
-import { STATUS_COLORS, height, prettyState } from '../utils';
+import { Process } from '../cpp-compat/Process';
+import { ProcessIndicator } from './Process';
 
 const WIDTH = 180;
 
 export class ProcessListIndicator extends Entity {
+	private readonly processIndicators: ProcessIndicator[] = [];
+
 	private center: Point = new Point();
 	private height: number = 0;
 	private width: number = 0;
@@ -22,11 +24,21 @@ export class ProcessListIndicator extends Entity {
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 
 		if (processList.length > 0) {
-			processList.forEach((process, i) => {
-				const processPos = center.add(new Point(0, HEIGHT / 2 - (i * 50 + 25)));
+			while (this.processIndicators.length < processList.length)
+				this.processIndicators.push(
+					new ProcessIndicator(
+						center.add(new Point(0, HEIGHT / 2 - (this.processIndicators.length * 50 + 25))),
+						processList[this.processIndicators.length].pid
+					)
+				);
 
-				this._renderProcess(renderEngine, process, processPos, metadata.selected && this._processSelectedBy(metadata.mouse!.position!, processPos));
-			});
+			processList.forEach((process, i) =>
+				this.processIndicators[i].render(
+					renderEngine,
+					process,
+					metadata.mouse?.position ? this.processIndicators[i].selectedBy(metadata.mouse.position, View.PROCESSES) : false
+				)
+			);
 		} else {
 			renderEngine.text(center.add(new Point(0, -5)), 'Empty', { fontSize: 32 });
 		}
@@ -42,45 +54,12 @@ export class ProcessListIndicator extends Entity {
 		);
 	}
 
-	private _renderProcess(renderEngine: RenderEngine, proc: Process, pos: Point, selected: boolean): void {
-		if (selected) {
-			renderEngine.fillRect(pos, WIDTH, 50, 'rgba(80, 144, 224, 0.5)');
-		}
-
-		renderEngine.rect(pos, WIDTH - 1, 49, 'black');
-
-		const nameLabel = `Process: ${proc.name}`;
-		const nameMetrics = renderEngine.measure(nameLabel);
-		renderEngine.text(pos.add(new Point(-90 + nameMetrics.width / 2 + 15, 25 - height(nameMetrics) / 2 - 5)), nameLabel);
-
-		const pidLabel = `PID: ${proc.pid}`;
-		const pidMetrics = renderEngine.measure(pidLabel);
-		renderEngine.text(pos.add(new Point(-90 + pidMetrics.width / 2 + 15, 10 - height(nameMetrics) / 2 - 5)), pidLabel);
-
-		const statusLabel = `Status: ${prettyState(proc.state)}`;
-		const statusMetrics = renderEngine.measure(statusLabel);
-		renderEngine.text(pos.add(new Point(-90 + statusMetrics.width / 2 + 15, -5 - height(nameMetrics) / 2 - 5)), statusLabel);
-
-		switch (proc.state) {
-			case ProcessState.DONE:
-				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.green);
-				break;
-			case ProcessState.PROCESSING:
-				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.yellow);
-				break;
-			case ProcessState.BLOCKED:
-				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.red);
-				break;
-			case ProcessState.READY:
-				renderEngine.fillRect(pos.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.blue);
-				break;
-			default:
-				throw new Error(`Invalid process state: ${proc.state}`);
-		}
+	public selectedProcess(point: Point, view: View): ProcessIndicator | undefined {
+		return this.processIndicators.find((indicator) => indicator.selectedBy(point, view));
 	}
 
-	private _processSelectedBy(point: Point, processPos: Point): boolean {
-		return point.x >= processPos.x - 100 && point.x <= processPos.x + 100 && point.y >= processPos.y - 25 && point.y <= processPos.y + 25;
+	public get length(): number {
+		return this.processIndicators.length;
 	}
 
 	private _calculateDims(renderEngine: RenderEngine, count: number): { center: Point; HEIGHT: number; WIDTH: number } {

@@ -20,12 +20,16 @@ const WIDTH = 315,
 export class CPUIndicator extends Entity {
 	private center: Point = new Point();
 
-	constructor(private readonly core: number) {
+	constructor(public readonly core: number) {
 		super();
 	}
 
-	public render(renderEngine: RenderEngine, data: CPUData): void {
+	public render(renderEngine: RenderEngine, data: CPUData, selected: boolean): void {
 		this.center = this._calculateCenter(renderEngine);
+
+		if (selected) {
+			renderEngine.fillRect(this.center, WIDTH, HEIGHT, STATUS_COLORS.selected);
+		}
 
 		renderEngine.rect(this.center, WIDTH - 1, HEIGHT - 1, 'black');
 		renderEngine.fillRect(this.center.add(new Point(-WIDTH / 2 + 5, 0)), 10, HEIGHT, data.available ? STATUS_COLORS.green : STATUS_COLORS.blue);
