@@ -3,7 +3,7 @@
 
 #include "decls.h"
 
-// A general interrupt
+// A general interrupt (could be I/O interrupt or other like network or something)
 class Interrupt {
 public:
 	Interrupt(InterruptType type) : _type(type) {}

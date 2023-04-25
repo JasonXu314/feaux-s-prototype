@@ -225,8 +225,8 @@ int main() {
 
 								// Mark the process as blocked
 								runningProcess->state = blocked;
-								if (freeDevice == -1) {											  // If there is no I/O device available
-									runningProcess->regstate = machine->cores[core]->regstate();  // TODO: move these 3 statements out
+								if (freeDevice == -1) {	 // If there is no I/O device available
+									runningProcess->regstate = machine->cores[core]->regstate();
 									state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 								} else {
 									if (state->pendingRequests.empty()) {  // If this is the only I/O request pending, just pass it to the I/O device
@@ -237,7 +237,7 @@ int main() {
 										runningProcess->regstate = machine->cores[core]->regstate();
 										state->pendingRequests.push(IORequest{runningProcess->pid, (uint8_t)runningProcess->regstate.rdi});
 
-										// Service the first I/O request to besubmitted
+										// Service the first I/O request to be submitted
 										IORequest req = state->pendingRequests.front();
 										state->pendingRequests.pop();
 										machine->ioDevices[freeDevice]->handle(req);
