@@ -7,6 +7,7 @@ import { CPUIndicator } from './ui/CPU';
 import { IODeviceIndicator } from './ui/IODevice';
 import { MLFReadyListsIndicator } from './ui/MLFReadyLists';
 import { ProcessListIndicator } from './ui/ProcessList';
+import { ProcessStatsIndicator } from './ui/ProcessStats';
 import { ReadyListIndicator } from './ui/ReadyList';
 import { RegistersIndicator } from './ui/Registers';
 import { Tab } from './ui/Tab';
@@ -61,6 +62,7 @@ export class OSEngine {
 	private readonly processListIndicator: ProcessListIndicator = new ProcessListIndicator();
 	private readonly cpuRegIndicators: RegistersIndicator[] = [];
 	private readonly processRegIndicators: RegistersIndicator[] = [];
+	private readonly processStatsIndicators: ProcessStatsIndicator[] = [];
 
 	private _nextTick: number = -1;
 	private _selectedEntity: Entity | null = null;
@@ -238,6 +240,16 @@ export class OSEngine {
 		}
 	}
 
+	public showProcessStats(pid: number, pos: Point): void {
+		if (pid - 1 >= this.processListIndicator.length || pid - 1 < 0) {
+			throw new Error(`Tried to show registers of nonexistent process ${pid}`);
+		} else {
+			const indicator = new ProcessStatsIndicator(pos, pid);
+			this.processStatsIndicators.push(indicator);
+			this.entities.push(indicator);
+		}
+	}
+
 	private _tick(): void {
 		this._nextTick = requestAnimationFrame(() => this._tick());
 
@@ -252,7 +264,7 @@ export class OSEngine {
 		}
 
 		this.entities.forEach((entity) => {
-			if (entity instanceof RegistersIndicator) {
+			if (entity instanceof RegistersIndicator || entity instanceof ProcessStatsIndicator) {
 				entity.update({ down: this._mouseDown, position: this._mousePos, delta: this._mouseDelta } as MouseData, entity === this._selectedEntity);
 			}
 		});
@@ -297,6 +309,9 @@ export class OSEngine {
 					mouse: { delta: this._mouseDelta!, down: this._mouseDown, position: this._mousePos } as MouseData
 				});
 				this.processRegIndicators.forEach((indicator) =>
+					indicator.render(this.renderEngine, osState.processList.find((proc) => proc.pid === indicator.id)!, this._mousePos)
+				);
+				this.processStatsIndicators.forEach((indicator) =>
 					indicator.render(this.renderEngine, osState.processList.find((proc) => proc.pid === indicator.id)!, this._mousePos)
 				);
 				break;

@@ -84,6 +84,13 @@ const Index: NextPage = () => {
 							command: () => {
 								osEngine.showProcessRegisters(entity.pid, spacePos.add(new Point(50, -200)));
 							}
+						},
+						{
+							label: 'View Stats',
+							icon: 'pi pi-fw pi-list',
+							command: () => {
+								osEngine.showProcessStats(entity.pid, spacePos.add(new Point(50, -150)));
+							}
 						}
 					]);
 
