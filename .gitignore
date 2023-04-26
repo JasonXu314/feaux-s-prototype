@@ -3,5 +3,6 @@ node_modules/
 .env
 
 .vscode/
-feaux-s/objects/
+feaux-s/objects/*
+feaux-s/bin/*
 public/main.*

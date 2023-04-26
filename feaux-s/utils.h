@@ -1,7 +1,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#ifndef FEAUX_S_BENCHMARKING
 #include <emscripten.h>
+#endif
 
 #include <list>
 #include <queue>

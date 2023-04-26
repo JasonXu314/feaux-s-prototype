@@ -5,11 +5,27 @@
 MachineStateCompat* exportMachineState = nullptr;
 OSStateCompat* exportState = nullptr;
 
-Instruction* exported allocInstructionList(uint instructionCount) { return new Instruction[instructionCount]; }
+Instruction*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	allocInstructionList(uint instructionCount) {
+	return new Instruction[instructionCount];
+}
 
-void exported freeInstructionList(Instruction* ptr) { delete[] ptr; }
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	freeInstructionList(Instruction* ptr) {
+	delete[] ptr;
+}
 
-char* exported allocString(unsigned int size) {
+char*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	allocString(unsigned int size) {
 	char* str = new char[size + 1];
 
 	str[size] = '\0';
@@ -17,9 +33,19 @@ char* exported allocString(unsigned int size) {
 	return str;
 }
 
-void exported freeString(char* str) { delete[] str; }
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	freeString(char* str) {
+	delete[] str;
+}
 
-void exported loadProgram(Instruction* instructionList, uint size, char* name) {
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	loadProgram(Instruction* instructionList, uint size, char* name) {
 	Program newProgram{name, size, new Instruction[size]};
 
 	for (uint i = 0; i < size; i++) {
@@ -29,9 +55,19 @@ void exported loadProgram(Instruction* instructionList, uint size, char* name) {
 	state->programs.emplace(name, newProgram);
 }
 
-Instruction* exported getProgramLocation(char* name) { return state->programs.at(name).instructions; }
+Instruction*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getProgramLocation(char* name) {
+	return state->programs.at(name).instructions;
+}
 
-uint exported spawn(char* name) {
+uint
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	spawn(char* name) {
 	if (state->programs.count(name)) {	// If there exists a program of that name
 		Program& program = state->programs.at(name);
 		PCB* proc = new PCB();
@@ -44,7 +80,11 @@ uint exported spawn(char* name) {
 		proc->state = ready;
 
 		memset(&proc->regstate, 0, sizeof(Registers));
+#if FEAUX_S_BENCHMARKING
+		proc->regstate.rip = (uint64_t)program.instructions;  // Loads the address of the first instruction into the instruction pointer of the process
+#else
 		proc->regstate.rip = (uint)program.instructions;  // Loads the address of the first instruction into the instruction pointer of the process
+#endif
 		proc->regstate.rdi = 0;
 		proc->reqProcessorTime = program.length - 1;
 
@@ -73,11 +113,33 @@ uint exported spawn(char* name) {
 	}
 }
 
-void exported pause() { state->paused = true; }
-void exported unpause() { state->paused = false; }
-void exported setClockDelay(uint delay) { machine->clockDelay = delay; }
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	pause() {
+	state->paused = true;
+}
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	unpause() {
+	state->paused = false;
+}
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setClockDelay(uint delay) {
+	machine->clockDelay = delay;
+}
 
-void exported setNumCores(uint8_t cores) {
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setNumCores(uint8_t cores) {
 	map<string, Program> programs = state->programs;
 	SchedulingStrategy strategy = state->strategy;
 	uint8_t numIODevices = machine->numIODevices;
@@ -91,7 +153,11 @@ void exported setNumCores(uint8_t cores) {
 	state->programs = programs;
 }
 
-void exported setNumIODevices(uint8_t ioDevices) {
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setNumIODevices(uint8_t ioDevices) {
 	map<string, Program> programs = state->programs;
 	SchedulingStrategy strategy = state->strategy;
 	uint8_t numCores = machine->numCores;
@@ -105,13 +171,16 @@ void exported setNumIODevices(uint8_t ioDevices) {
 	state->programs = programs;
 }
 
-void exported setSchedulingStrategy(SchedulingStrategy strategy) {
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setSchedulingStrategy(SchedulingStrategy strategy) {
 	map<string, Program> programs = state->programs;  // Save a copy of the programs, so that the new OS will still have the same programs
 	cleanupOS();
 
 	for (uint i = 0; i < machine->numCores; i++) {
-		Registers noop{0};
-		machine->cores[i]->load(noop);
+		machine->cores[i]->load(NOPROC);
 	}
 
 	for (uint i = 0; i < machine->numIODevices; i++) {
@@ -122,7 +191,11 @@ void exported setSchedulingStrategy(SchedulingStrategy strategy) {
 	state->programs = programs;
 }
 
-MachineStateCompat* exported getMachineState() {
+MachineStateCompat*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getMachineState() {
 	static uint prevNumCores = 0, prevNumIODevices = 0;
 
 	if (exportMachineState == nullptr) {
@@ -162,7 +235,11 @@ MachineStateCompat* exported getMachineState() {
 	return exportMachineState;
 }
 
-OSStateCompat* exported getOSState() {
+OSStateCompat*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getOSState() {
 	static uint prevProcListSize = 0, prevReadyListSize = 0, prevReentryListSize = 0, prevMLFReadyListSizes[NUM_LEVELS] = {0};
 
 	if (exportState == nullptr) {

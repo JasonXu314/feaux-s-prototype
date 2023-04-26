@@ -12,7 +12,11 @@ MachineState* machine = nullptr;
 CPU::CPU(uint8_t id) : _id(id) {
 	// Init to NOOP registers (see CPU::_readyNextInstruction)
 	_instruction = nullptr;
+#if FEAUX_S_BENCHMARKING
+	_registers.rip = (uint64_t) nullptr;
+#else
 	_registers.rip = (uint) nullptr;
+#endif
 }
 
 bool CPU::free() const { return _registers.rip == 0; }
@@ -137,7 +141,7 @@ void CPU::tick() {
 
 void CPU::_readNextInstruction() {
 	if (_registers.rip == 0) {
-		_instruction = nullptr;	 // NOOP (NOTE: DO NOT MODIFY RIP REGISTER)
+		_instruction = nullptr;	 // NOOP (NOTE: DO NOT INCREMENT RIP REGISTER)
 	} else {
 		_instruction = ((Instruction*)_registers.rip);
 		_registers.rip += sizeof(Instruction);
@@ -176,7 +180,7 @@ void IODevice::clear() {
 }
 
 void initMachine(uint8_t numCores, uint8_t numIODevices) {
-	machine = new MachineState{numCores, numIODevices, 500};
+	machine = new MachineState{numCores, numIODevices, 500, nullptr, nullptr};
 
 	machine->cores = new CPU*[numCores];
 	for (uint8_t i = 0; i < numCores; i++) {

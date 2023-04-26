@@ -73,8 +73,8 @@ uint* getRegister(Registers& regs, Regs reg) {
 			return &regs.r14;
 		case Regs::R15:
 			return &regs.r15;
-		deafult:
+		default:
 			cerr << "Unknown register " << reg << endl;
-			break;
+			return nullptr;
 	}
 }

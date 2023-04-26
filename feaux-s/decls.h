@@ -1,7 +1,9 @@
 #ifndef DECLS_H
 #define DECLS_H
 
+#ifndef FEAUX_S_BENCHMARKING
 #include <emscripten.h>
+#endif
 
 #include <list>
 #include <map>
@@ -9,7 +11,7 @@
 #include <string>
 
 struct PCB;
-struct IOInterrupt;
+class IOInterrupt;
 class Interrupt;
 class CPU;
 class IODevice;
@@ -76,8 +78,12 @@ struct Program {
 
 // The current register state (of a process or CPU)
 struct Registers {
-	// Status registers
-	uint rip;	 // Instruction pointer
+// Status registers
+#if FEAUX_S_BENCHMARKING
+	uint64_t rip;  // Instruction pointer
+#else
+	uint rip;
+#endif
 	uint flags;	 // Flags register (https://en.wikipedia.org/wiki/FLAGS_register) (yes, i know its only 32 bit because uint)
 
 	// GPRs

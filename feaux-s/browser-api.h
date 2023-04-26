@@ -41,7 +41,7 @@ struct ProcessCompat {
 		  level(0),
 		  processorTimeOnLevel(0),
 		  state(State::ready),
-		  regstate({0, 0}) {}
+		  regstate(NOPROC) {}
 
 	uint pid;
 	const char* name;
@@ -87,49 +87,109 @@ struct OSStateCompat {
 
 extern "C" {
 // Allocates data for an instruction list (for program) of the given size
-Instruction* exported allocInstructionList(uint instructionCount);
+Instruction*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	allocInstructionList(uint instructionCount);
 
 // Fress data previously allocated for an instruction list
-void exported freeInstructionList(Instruction* ptr);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	freeInstructionList(Instruction* ptr);
 
 // Allocates data for a string of the given size (will pad with '\0' at the end for c string semantics, so allocates 1 additional byte)
-char* exported allocString(unsigned int size);
+char*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	allocString(unsigned int size);
 
 // Fress data previously allocated for a string
-void exported freeString(char* str);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	freeString(char* str);
 
 // Loads a program into the OS
 // Note that the instruction list and name should have been earlier alloc'd and written to, and should be later freed (by the caller)
 // This function does not free the instruction list/name
-void exported loadProgram(Instruction* instructionList, uint size, char* name);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	loadProgram(Instruction* instructionList, uint size, char* name);
 
 // Gets the memory address where a program's instructions are stored (for monitoring progress since loops are a thing)
-Instruction* exported getProgramLocation(char* name);
+Instruction*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getProgramLocation(char* name);
 
 // Spawns a process with the program specified by the given name
-uint exported spawn(char* name);
+uint
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	spawn(char* name);
 
 // Pause the simulation
-void exported pause();
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	pause();
 
 // Unause the simulation
-void exported unpause();
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	unpause();
 
 // Set the clock delay of the simulated machine (in ms) (ie. the time between ticks)
-void exported setClockDelay(uint delay);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setClockDelay(uint delay);
 
-void exported setNumCores(uint8_t cores);
-void exported setNumIODevices(uint8_t ioDevices);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setNumCores(uint8_t cores);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setNumIODevices(uint8_t ioDevices);
 
 // Set the scheduling strategy of the OS
 // Needs to reboot OS, so will lose all processes (but keeps programs)
-void exported setSchedulingStrategy(SchedulingStrategy strategy);
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	setSchedulingStrategy(SchedulingStrategy strategy);
 
 // Get the current state of the machine
-MachineStateCompat* exported getMachineState();
+MachineStateCompat*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getMachineState();
 
 // Get the current state of the OS
-OSStateCompat* exported getOSState();
+OSStateCompat*
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	getOSState();
 }
 
 #endif

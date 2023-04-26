@@ -25,7 +25,16 @@ it should enter a blocked state for IOEvent::duration time steps.
 using namespace std;
 
 struct PCB {
-	PCB() : pid(999999), arrivalTime(-1), doneTime(-1), reqProcessorTime(0), processorTime(0), state(ready), level(-1), processorTimeOnLevel(0) {}
+	PCB()
+		: pid(999999),
+		  arrivalTime(-1),
+		  doneTime(-1),
+		  reqProcessorTime(0),
+		  processorTime(0),
+		  level(-1),
+		  processorTimeOnLevel(0),
+		  state(ready),
+		  regstate(NOPROC) {}
 
 	uint pid;					// The process ID, assigned when the process is admitted to the system
 	string name;				// The name of the process (same as program name)

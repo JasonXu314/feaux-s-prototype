@@ -85,8 +85,7 @@ PCB* schedule(uint core) {
 
 						// Reset the CPU
 						state->runningProcess[core] = nullptr;
-						Registers noop{0};
-						machine->cores[core]->load(noop);
+						machine->cores[core]->load(NOPROC);
 					}
 
 					return proc;
