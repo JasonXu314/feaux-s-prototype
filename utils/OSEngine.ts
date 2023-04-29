@@ -134,6 +134,11 @@ export class OSEngine {
 							this.entities.splice(this.entities.indexOf(entity), 1);
 						}
 					}
+				} else if (entity instanceof ProcessStatsIndicator) {
+					if (entity.shouldClose(this._mousePos!)) {
+						this.processStatsIndicators.splice(this.processStatsIndicators.indexOf(entity), 1);
+						this.entities.splice(this.entities.indexOf(entity), 1);
+					}
 				}
 			});
 
