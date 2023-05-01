@@ -5,4 +5,3 @@ node_modules/
 .vscode/
 feaux-s/objects/*
 feaux-s/bin/*
-public/main.*
