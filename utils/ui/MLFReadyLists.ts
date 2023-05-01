@@ -2,7 +2,7 @@ import { Entity } from '../Entity';
 import { View } from '../OSEngine';
 import { Point } from '../Point';
 import { RenderEngine } from '../RenderEngine';
-import { Process } from '../types';
+import { Process } from '../cpp-compat/Process';
 import { height } from '../utils';
 
 export class MLFReadyListsIndicator extends Entity {
