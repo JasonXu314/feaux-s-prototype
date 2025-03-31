@@ -19,6 +19,7 @@ class IODevice;
 #define exported EMSCRIPTEN_KEEPALIVE
 #define NUM_LEVELS 6
 typedef unsigned int uint;
+typedef unsigned char uint8_t;
 
 // The OS action at the current step of the simulation
 enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCALL, SERVICE_REQUEST };

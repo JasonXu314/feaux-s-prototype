@@ -36,7 +36,7 @@ export interface WASMModule {
 	HEAPU8: Uint8Array;
 	HEAPU16: Uint16Array;
 	HEAPU32: Uint32Array;
-	asm: {
+	wasmExports: {
 		memory: WebAssembly.Memory;
 
 		loadProgram(instructionList: Ptr<Instruction[]>, size: number, name: Ptr<string>): void;
@@ -61,11 +61,11 @@ export class WASMEngine {
 	private readonly memory: Memory;
 
 	constructor(private readonly module: WASMModule) {
-		this.memory = new Memory(module.asm.memory);
+		this.memory = new Memory(module.wasmExports.memory);
 	}
 
 	public loadProgram(instructionList: Instruction[], name: string): void {
-		const ilPtr = this.module.asm.allocInstructionList(instructionList.length);
+		const ilPtr = this.module.wasmExports.allocInstructionList(instructionList.length);
 		instructionList.forEach((instruction, i) => {
 			this.memory.writeUint32(ilPtr + i * 12, instruction.opcode);
 
@@ -78,28 +78,28 @@ export class WASMEngine {
 			this.memory.writeUint32(ilPtr + i * 12 + 8, instruction.operand2);
 		});
 
-		const strPtr = this.module.asm.allocString(name.length);
+		const strPtr = this.module.wasmExports.allocString(name.length);
 		this.memory.writeString(strPtr, name);
 
-		this.module.asm.loadProgram(ilPtr, instructionList.length, strPtr);
+		this.module.wasmExports.loadProgram(ilPtr, instructionList.length, strPtr);
 
-		this.module.asm.freeInstructionList(ilPtr);
-		this.module.asm.freeString(strPtr);
+		this.module.wasmExports.freeInstructionList(ilPtr);
+		this.module.wasmExports.freeString(strPtr);
 	}
 
 	public spawn(name: string): number {
-		const strPtr = this.module.asm.allocString(name.length);
+		const strPtr = this.module.wasmExports.allocString(name.length);
 		this.memory.writeString(strPtr, name);
 
-		const pid = this.module.asm.spawn(strPtr);
+		const pid = this.module.wasmExports.spawn(strPtr);
 
-		this.module.asm.freeString(strPtr);
+		this.module.wasmExports.freeString(strPtr);
 
 		return pid;
 	}
 
 	public getMachineState(): MachineState {
-		const ptr = this.module.asm.getMachineState();
+		const ptr = this.module.wasmExports.getMachineState();
 
 		const numCores = this.memory.readUint8(ptr);
 		const numIODevices = this.memory.readUint8(ptr + 1);
@@ -121,7 +121,7 @@ export class WASMEngine {
 	}
 
 	public getOSState(): OSState {
-		const ptr = this.module.asm.getOSState();
+		const ptr = this.module.wasmExports.getOSState();
 
 		const numProcesses = this.memory.readUint32(ptr);
 		const processList = Process.readFrom(this.memory, this.memory.readUint32(ptr + 4), numProcesses);
@@ -173,36 +173,36 @@ export class WASMEngine {
 	}
 
 	public pause(): void {
-		this.module.asm.pause();
+		this.module.wasmExports.pause();
 	}
 
 	public unpause(): void {
-		this.module.asm.unpause();
+		this.module.wasmExports.unpause();
 	}
 
 	public setClockDelay(delay: number): void {
-		this.module.asm.setClockDelay(delay);
+		this.module.wasmExports.setClockDelay(delay);
 	}
 
 	public setSchedulingStrategy(strategy: SchedulingStrategy): void {
-		this.module.asm.setSchedulingStrategy(strategy);
+		this.module.wasmExports.setSchedulingStrategy(strategy);
 	}
 
 	public setNumCores(cores: number): void {
-		this.module.asm.setNumCores(cores);
+		this.module.wasmExports.setNumCores(cores);
 	}
 
 	public setNumIODevices(ioDevices: number): void {
-		this.module.asm.setNumIODevices(ioDevices);
+		this.module.wasmExports.setNumIODevices(ioDevices);
 	}
 
 	public getProgramStart(name: string): number {
-		const strPtr = this.module.asm.allocString(name.length);
+		const strPtr = this.module.wasmExports.allocString(name.length);
 		this.memory.writeString(strPtr, name);
 
-		const result = this.module.asm.getProgramLocation(strPtr);
+		const result = this.module.wasmExports.getProgramLocation(strPtr);
 
-		this.module.asm.freeString(strPtr);
+		this.module.wasmExports.freeString(strPtr);
 
 		return result;
 	}

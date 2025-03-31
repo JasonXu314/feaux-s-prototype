@@ -3,6 +3,7 @@ CXX = em++
 FLAGS = -g -W -Wall -Wextra -Wpedantic -Werror -std=c++11
 LIBRARIES = -lpthread
 EXPORTED_FUNCTIONS=_main
+EXPORTED_RUNTIME_METHODS=wasmExports
 ASYNCIFY_FLAGS=-s ASYNCIFY -s ASYNCIFY_IMPORTS=[jssleep]
 
 SOURCES=$(wildcard feaux-s/*.cpp)
@@ -32,7 +33,7 @@ feaux-s/objects/%.o: feaux-s/%.cpp feaux-s/%.h
 	$(CXX) $< -c -o $@ $(FLAGS)
 
 public/main.wasm: $(OBJECTS)
-	$(CXX) $^ -o public/main.js -s EXPORTED_FUNCTIONS=$(EXPORTED_FUNCTIONS) $(ASYNCIFY_FLAGS) $(LIBS)
+	$(CXX) $^ -o public/main.js -s EXPORTED_RUNTIME_METHODS=$(EXPORTED_RUNTIME_METHODS) -s EXPORTED_FUNCTIONS=$(EXPORTED_FUNCTIONS) $(ASYNCIFY_FLAGS) $(LIBS)
 
 feaux-s/bin/bench: $(OBJECTS)
 	$(CXX) $^ -o $@ $(FLAGS) $(LIBS)
