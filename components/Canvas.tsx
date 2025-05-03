@@ -13,16 +13,31 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 
 	const setup = useCallback(
 		(canvas: HTMLCanvasElement) => {
+			console.log((window as any).Module.calledRun);
 			console.log((window as any).Module.wasmExports);
-			const we = new WASMEngine((window as any).Module);
-			const oe = new OSEngine(canvas, we);
+			if ((window as any).Module.calledRun) {
+				const we = new WASMEngine((window as any).Module);
+				const oe = new OSEngine(canvas, we);
 
-			wasmEngine.current = we;
-			osEngine.current = oe;
+				wasmEngine.current = we;
+				osEngine.current = oe;
 
-			onLoad(we, oe);
+				onLoad(we, oe);
 
-			oe.start();
+				oe.start();
+			} else {
+				(window as any).Module.onRuntimeInitialized = () => {
+					const we = new WASMEngine((window as any).Module);
+					const oe = new OSEngine(canvas, we);
+
+					wasmEngine.current = we;
+					osEngine.current = oe;
+
+					onLoad(we, oe);
+
+					oe.start();
+				};
+			}
 		},
 		[onLoad]
 	);
