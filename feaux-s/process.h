@@ -28,6 +28,7 @@ struct PCB {
 	PCB()
 		: pid(999999),
 		  arrivalTime(-1),
+		  deadline(-1),
 		  doneTime(-1),
 		  reqProcessorTime(0),
 		  processorTime(0),
@@ -39,6 +40,7 @@ struct PCB {
 	uint pid;					// The process ID, assigned when the process is admitted to the system
 	string name;				// The name of the process (same as program name)
 	long arrivalTime;			// When the process was spawned
+	long deadline;				// The deadline of the task that this process represents (absolute deadline; only used on RT schedulers)
 	long doneTime;				// The time that the process completed execution
 	long reqProcessorTime;		// Total amount of processor time needed (number of instructions)
 	long processorTime;			// Total amount of processor time this process has received
@@ -46,4 +48,13 @@ struct PCB {
 	long processorTimeOnLevel;	// The amount of CPU time the process has received on the current level (for MLF processing)
 	State state;				// State of the process
 	Registers regstate;			// The saved state of registers of the process
+};
+
+struct RTJob {
+	RTJob() : period(-1), deadline(-1), delay(-1) {}
+
+	string program;
+	uint period;
+	uint deadline;
+	uint delay;
 };

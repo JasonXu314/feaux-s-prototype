@@ -40,3 +40,4 @@ feaux-s/bin/bench: $(OBJECTS)
 
 clean:
 	@- rm feaux-s/objects/*.o
+	@- rm public/main.wasm public/main.js

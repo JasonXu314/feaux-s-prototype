@@ -44,6 +44,7 @@ void cleanupOS() {
 PCB* schedule(uint core) {
 	switch (state->strategy) {
 		case SchedulingStrategy::FIFO:
+		case SchedulingStrategy::RT_FIFO:
 			if (!state->fifoReadyList.empty()) {
 				PCB* proc = state->fifoReadyList.front();
 				state->fifoReadyList.pop();
@@ -92,9 +93,27 @@ PCB* schedule(uint core) {
 				}
 			}
 			break;
+		case SchedulingStrategy::RT_EDF:
+			if (!state->edfReadyList.empty()) {
+				PCB* proc = state->edfReadyList.top();
+				state->edfReadyList.pop();
+
+				return proc;
+			}
+			break;
+		case SchedulingStrategy::RT_LST:
+			if (!state->lstReadyList.empty()) {
+				PCB* proc = state->lstReadyList.top();
+				state->lstReadyList.pop();
+
+				return proc;
+			}
+			break;
 	}
 
 	return nullptr;
 }
 
-void handleInterrupt(Interrupt* interrupt) { state->interrupts.push_back(interrupt); }
+void handleInterrupt(Interrupt* interrupt) {
+	state->interrupts.push_back(interrupt);
+}

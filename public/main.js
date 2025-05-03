@@ -4401,7 +4401,8 @@ var _allocString = Module['_allocString'] = createExportWrapper('allocString', 1
 var _freeString = Module['_freeString'] = createExportWrapper('freeString', 1);
 var _loadProgram = Module['_loadProgram'] = createExportWrapper('loadProgram', 3);
 var _getProgramLocation = Module['_getProgramLocation'] = createExportWrapper('getProgramLocation', 1);
-var _spawn = Module['_spawn'] = createExportWrapper('spawn', 1);
+var _spawn = Module['_spawn'] = createExportWrapper('spawn', 2);
+var _dispatch = Module['_dispatch'] = createExportWrapper('dispatch', 4);
 var _pause = Module['_pause'] = createExportWrapper('pause', 0);
 var _unpause = Module['_unpause'] = createExportWrapper('unpause', 0);
 var _setClockDelay = Module['_setClockDelay'] = createExportWrapper('setClockDelay', 1);

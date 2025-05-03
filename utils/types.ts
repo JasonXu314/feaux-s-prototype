@@ -23,7 +23,10 @@ export enum SchedulingStrategy {
 	FIFO,
 	SJF,
 	SRT,
-	MLF
+	MLF,
+	RT_FIFO,
+	RT_EDF,
+	RT_LST
 }
 
 export enum Opcode {

@@ -8,6 +8,7 @@ void exportProcess(const PCB& src, ProcessCompat& dest) {
 	dest.pid = src.pid;
 	dest.name = src.name.c_str();
 	dest.arrivalTime = src.arrivalTime;
+	dest.deadline = src.deadline;
 	dest.doneTime = src.doneTime;
 	dest.reqProcessorTime = src.reqProcessorTime;
 	dest.processorTime = src.processorTime;

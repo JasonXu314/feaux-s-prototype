@@ -41,7 +41,8 @@ export interface WASMModule {
 
 		loadProgram(instructionList: Ptr<Instruction[]>, size: number, name: Ptr<string>): void;
 		getProgramLocation(name: number): number;
-		spawn(name: Ptr<string>): number;
+		spawn(name: Ptr<string>, deadline: number): number;
+		dispatch(name: Ptr<string>, period: number, deadline: number, start: number): number;
 		allocInstructionList(size: number): Ptr<Instruction[]>;
 		allocString(size: number): Ptr<string>;
 		freeInstructionList(addr: Ptr<Instruction[]>): void;
@@ -61,6 +62,7 @@ export class WASMEngine {
 	private readonly memory: Memory;
 
 	constructor(private readonly module: WASMModule) {
+		// console.log(module);
 		this.memory = new Memory(module.wasmExports.memory);
 	}
 
@@ -87,11 +89,22 @@ export class WASMEngine {
 		this.module.wasmExports.freeString(strPtr);
 	}
 
-	public spawn(name: string): number {
+	public spawn(name: string, deadline: number): number {
 		const strPtr = this.module.wasmExports.allocString(name.length);
 		this.memory.writeString(strPtr, name);
 
-		const pid = this.module.wasmExports.spawn(strPtr);
+		const pid = this.module.wasmExports.spawn(strPtr, deadline);
+
+		this.module.wasmExports.freeString(strPtr);
+
+		return pid;
+	}
+
+	public dispatch(name: string, period: number, deadline: number, start: number): number {
+		const strPtr = this.module.wasmExports.allocString(name.length);
+		this.memory.writeString(strPtr, name);
+
+		const pid = this.module.wasmExports.dispatch(strPtr, period, deadline, start);
 
 		this.module.wasmExports.freeString(strPtr);
 

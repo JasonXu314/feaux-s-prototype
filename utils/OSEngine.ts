@@ -216,13 +216,22 @@ export class OSEngine {
 		return [...this.programs.keys()];
 	}
 
-	public spawn(program: string): void {
+	public spawn(program: string, deadline: number): void {
 		if (!this.programs.has(program)) {
 			console.error('Unknown program', program);
 			return;
 		}
 
-		this.wasmEngine.spawn(program);
+		this.wasmEngine.spawn(program, deadline);
+	}
+
+	public dispatch(program: string, period: number, deadline: number, start: number): void {
+		if (!this.programs.has(program)) {
+			console.error('Unknown program', program);
+			return;
+		}
+
+		this.wasmEngine.dispatch(program, period, deadline, start);
 	}
 
 	public showCPURegisters(core: number, pos: Point): void {

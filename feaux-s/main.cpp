@@ -53,6 +53,17 @@ int main() {
 #if FEAUX_S_BENCHMARKING
 			processesComing = simulate();
 #endif
+
+			// If in RT mode, check RT jobs
+			if (state->strategy == SchedulingStrategy::RT_FIFO || state->strategy == SchedulingStrategy::RT_LST ||
+				state->strategy == SchedulingStrategy::RT_EDF) {
+				for (RTJob* job : state->jobList) {
+					if ((state->time - job->delay) % job->period == 0) {
+						spawn(job->program.c_str(), state->time + job->deadline);
+					}
+				}
+			}
+
 			// Tick the CPUs and I/O devices
 			for (uint8_t i = 0; i < machine->numCores; i++) machine->cores[i]->tick();
 			for (uint8_t i = 0; i < machine->numIODevices; i++) machine->ioDevices[i]->tick();
@@ -84,6 +95,7 @@ int main() {
 						} else {
 							switch (state->strategy) {
 								case SchedulingStrategy::FIFO:
+								case SchedulingStrategy::RT_FIFO:
 									if (!state->fifoReadyList.empty()) {
 										state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
 									}
@@ -104,6 +116,18 @@ int main() {
 											state->stepAction[core] = StepAction::BEGIN_RUN;  // start running a process
 											break;
 										}
+									}
+									break;
+								case SchedulingStrategy::RT_EDF:
+									if (!state->edfReadyList.empty()) {
+										state->stepAction[core] = StepAction::BEGIN_RUN;
+										break;
+									}
+									break;
+								case SchedulingStrategy::RT_LST:
+									if (!state->lstReadyList.empty()) {
+										state->stepAction[core] = StepAction::BEGIN_RUN;
+										break;
 									}
 									break;
 								default:
@@ -342,6 +366,7 @@ int main() {
 			for (auto it = state->reentryList.begin(); it != state->reentryList.end(); it++) {
 				switch (state->strategy) {
 					case SchedulingStrategy::FIFO:
+					case SchedulingStrategy::RT_FIFO:
 						state->fifoReadyList.emplace(*it);
 						break;
 					case SchedulingStrategy::SJF:
@@ -352,6 +377,12 @@ int main() {
 						break;
 					case SchedulingStrategy::MLF:
 						state->mlfLists[(*it)->level].emplace(*it);
+						break;
+					case SchedulingStrategy::RT_EDF:
+						state->edfReadyList.emplace(*it);
+						break;
+					case SchedulingStrategy::RT_LST:
+						state->lstReadyList.emplace(*it);
 						break;
 				}
 			}

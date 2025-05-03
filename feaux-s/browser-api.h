@@ -35,6 +35,7 @@ struct ProcessCompat {
 		: pid(-1),
 		  name(nullptr),
 		  arrivalTime(-1),
+		  deadline(-1),
 		  doneTime(-1),
 		  reqProcessorTime(-1),
 		  processorTime(-1),
@@ -46,6 +47,7 @@ struct ProcessCompat {
 	uint pid;
 	const char* name;
 	long arrivalTime;
+	long deadline;
 	long doneTime;
 	long reqProcessorTime;
 	long processorTime;
@@ -135,7 +137,14 @@ uint
 #ifndef FEAUX_S_BENCHMARKING
 	exported
 #endif
-	spawn(char* name);
+	spawn(const char* name, uint d);
+
+// Dispatches a job (periodic task) with the program specified by the given name
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	dispatch(const char* name, uint p, uint d, uint s);
 
 // Pause the simulation
 void

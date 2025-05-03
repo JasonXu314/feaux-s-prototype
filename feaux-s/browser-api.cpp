@@ -67,7 +67,7 @@ uint
 #ifndef FEAUX_S_BENCHMARKING
 	exported
 #endif
-	spawn(char* name) {
+	spawn(const char* name, uint d) {
 	if (state->programs.count(name)) {	// If there exists a program of that name
 		Program& program = state->programs.at(name);
 		PCB* proc = new PCB();
@@ -75,6 +75,7 @@ uint
 		proc->pid = ++nextPID;
 		proc->name = name;
 		proc->arrivalTime = state->time;
+		proc->deadline = state->time + d;
 		proc->level = 0;
 		proc->processorTimeOnLevel = 0;
 		proc->state = ready;
@@ -92,6 +93,7 @@ uint
 
 		switch (state->strategy) {
 			case SchedulingStrategy::FIFO:
+			case SchedulingStrategy::RT_FIFO:
 				state->fifoReadyList.emplace(proc);
 				break;
 			case SchedulingStrategy::SJF:
@@ -103,6 +105,12 @@ uint
 			case SchedulingStrategy::MLF:
 				state->mlfLists[0].emplace(proc);
 				break;
+			case SchedulingStrategy::RT_EDF:
+				state->edfReadyList.emplace(proc);
+				break;
+			case SchedulingStrategy::RT_LST:
+				state->lstReadyList.emplace(proc);
+				break;
 			default:
 				return -1;
 		}
@@ -110,6 +118,23 @@ uint
 		return proc->pid;
 	} else {
 		return -1;
+	}
+}
+
+void
+#ifndef FEAUX_S_BENCHMARKING
+	exported
+#endif
+	dispatch(const char* name, uint p, uint d, uint s) {
+	if (state->programs.count(name)) {	// If there exists a program of that name
+		RTJob* job = new RTJob();
+
+		job->program = name;
+		job->period = p;
+		job->deadline = d;
+		job->delay = state->time + s;
+
+		state->jobList.emplace_back(job);
 	}
 }
 
@@ -317,6 +342,7 @@ OSStateCompat*
 	// cout << "Exporting ready list(s)" << endl;
 	switch (state->strategy) {
 		case SchedulingStrategy::FIFO:
+		case SchedulingStrategy::RT_FIFO:
 			exportState->numReady = state->fifoReadyList.size();
 			if (exportState->numReady > 0) {
 				exportState->readyList = new ProcessCompat[exportState->numReady];
@@ -409,7 +435,46 @@ OSStateCompat*
 						nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
 				}
 			}
+			break;
+		case SchedulingStrategy::RT_EDF:
+			exportState->numReady = state->edfReadyList.size();
+			if (exportState->numReady > 0) {
+				exportState->readyList = new ProcessCompat[exportState->numReady];
 
+				auto copy = state->edfReadyList;
+				for (uint i = 0; i < exportState->numReady; i++) {
+					PCB* ptr = copy.top();
+
+					exportProcess(*ptr, exportState->readyList[i]);
+
+					copy.pop();
+				}
+
+				prevReadyListSize = exportState->numReady;
+			} else {
+				prevReadyListSize = 0;
+				exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
+			break;
+		case SchedulingStrategy::RT_LST:
+			exportState->numReady = state->lstReadyList.size();
+			if (exportState->numReady > 0) {
+				exportState->readyList = new ProcessCompat[exportState->numReady];
+
+				auto copy = state->lstReadyList;
+				for (uint i = 0; i < exportState->numReady; i++) {
+					PCB* ptr = copy.top();
+
+					exportProcess(*ptr, exportState->readyList[i]);
+
+					copy.pop();
+				}
+
+				prevReadyListSize = exportState->numReady;
+			} else {
+				prevReadyListSize = 0;
+				exportState->readyList = nullptr;  // should be ignored on the other end if there are 0 processes, but set it to nullptr anyway for insurance
+			}
 			break;
 	}
 

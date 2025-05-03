@@ -35,6 +35,12 @@ export function prettyStrategy(strategy: SchedulingStrategy): string {
 			return 'Shortest Remaining Time';
 		case SchedulingStrategy.MLF:
 			return 'Multi-Level Feedback';
+		case SchedulingStrategy.RT_FIFO:
+			return 'Real-Time First In First Out';
+		case SchedulingStrategy.RT_EDF:
+			return 'Real-Time Earliest Deadline First';
+		case SchedulingStrategy.RT_LST:
+			return 'Real-Time Least Slack Time';
 		default:
 			return 'whoops...';
 	}

@@ -11,6 +11,7 @@
 #include <string>
 
 struct PCB;
+struct RTJob;
 class IOInterrupt;
 class Interrupt;
 class CPU;
@@ -28,7 +29,10 @@ enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCAL
 // SJF = Shortest Job First
 // SRT = Shortest Remaining Time
 // MLF = Multi-Level Feedback
-enum SchedulingStrategy { FIFO, SJF, SRT, MLF };
+// RT_* = Real-Time
+// EDF = Earliest Deadline First
+// LST = Least Slack time
+enum SchedulingStrategy { FIFO, SJF, SRT, MLF, RT_FIFO, RT_EDF, RT_LST };
 // The states a process can be in
 enum State { ready, processing, blocked, done };
 // The opcodes for CPU instructions
@@ -133,13 +137,28 @@ public:
 	bool operator()(PCB* a, PCB* b);
 };
 
+// A class for the EDF (Earliest Deadline First) priority queue to be able to compare 2 processes
+class EDFComparator {
+public:
+	bool operator()(PCB* a, PCB* b);
+};
+
+// A class for the LST (Least Slack Time) priority queue to be able to compare 2 processes
+class LSTComparator {
+public:
+	bool operator()(PCB* a, PCB* b);
+};
+
 // The data kept track of by the OS
 struct OSState {
+	std::list<RTJob*> jobList;												   // A list of all the real-time jobs scheduled
 	std::list<PCB*> processList;											   // A list of all the processes that have/are/will execute
 	std::list<Interrupt*> interrupts;										   // A list of the interrupts that the OS has yet to handle
 	std::queue<PCB*> fifoReadyList;											   // The ready list for the FIFO scheduling algorithm
 	std::priority_queue<PCB*, std::vector<PCB*>, SJFComparator> sjfReadyList;  // The ready list for the SJF scheduling algorithm
 	std::priority_queue<PCB*, std::vector<PCB*>, SRTComparator> srtReadyList;  // The ready list for the SRT scheduling algorithm
+	std::priority_queue<PCB*, std::vector<PCB*>, EDFComparator> edfReadyList;  // The ready list for the RT_EDF scheduling algorithm
+	std::priority_queue<PCB*, std::vector<PCB*>, LSTComparator> lstReadyList;  // The ready list for the RT_LST scheduling algorithm
 	std::queue<PCB*>* mlfLists;												   // The ready lists for the MLF scheduling algorithm (will always be 6 long)
 	std::list<PCB*> reentryList;											   // The list of processes that, on this cycle, had I/O operations complete
 	std::queue<IORequest> pendingRequests;	// The pending I/O requests (raised by a process, but all I/O Devices were busy)

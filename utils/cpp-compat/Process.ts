@@ -3,11 +3,12 @@ import { ProcessState } from '../types';
 import { Registers } from './Registers';
 
 export class Process {
-	public static readonly SIZE = 36 + Registers.SIZE;
+	public static readonly SIZE = 40 + Registers.SIZE;
 
 	private _pid: number = -1;
 	private _name: string = '';
 	private _arrivalTime: number = -1;
+	private _deadline: number = -1;
 	private _doneTime: number = -1;
 	private _reqProcessorTime: number = -1;
 	private _processorTime: number = -1;
@@ -27,13 +28,14 @@ export class Process {
 			proc._pid = memory.readUint32(ptr);
 			proc._name = memory.readString(memory.readUint32(ptr + 4));
 			proc._arrivalTime = memory.readInt32(ptr + 8);
-			proc._doneTime = memory.readInt32(ptr + 12);
-			proc._reqProcessorTime = memory.readInt32(ptr + 16);
-			proc._processorTime = memory.readInt32(ptr + 20);
-			proc._level = memory.readInt32(ptr + 24);
-			proc._processorTimeOnLevel = memory.readInt32(ptr + 28);
-			proc._state = memory.readUint32(ptr + 32);
-			proc._registers = Registers.readFrom(memory, ptr + 36);
+			proc._deadline = memory.readInt32(ptr + 12);
+			proc._doneTime = memory.readInt32(ptr + 16);
+			proc._reqProcessorTime = memory.readInt32(ptr + 20);
+			proc._processorTime = memory.readInt32(ptr + 24);
+			proc._level = memory.readInt32(ptr + 28);
+			proc._processorTimeOnLevel = memory.readUint32(ptr + 32);
+			proc._state = memory.readUint32(ptr + 36);
+			proc._registers = Registers.readFrom(memory, ptr + 40);
 
 			return proc;
 		} else {
@@ -63,6 +65,10 @@ export class Process {
 
 	public get processorTime(): number {
 		return this._processorTime;
+	}
+
+	public get deadline(): number {
+		return this._deadline;
 	}
 
 	public get level(): number {
