@@ -13,7 +13,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 
 	const setup = useCallback(
 		(canvas: HTMLCanvasElement) => {
-			console.log((window as any).Module);
+			console.log((window as any).Module.wasmExports);
 			const we = new WASMEngine((window as any).Module);
 			const oe = new OSEngine(canvas, we);
 
