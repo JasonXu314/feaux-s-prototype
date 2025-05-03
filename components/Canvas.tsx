@@ -26,7 +26,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 		[onLoad]
 	);
 
-	return <canvas onContextMenu={(evt) => (evtRef.current = evt)} height="4800" width="1800" ref={(elem) => elem && setup(elem)} />;
+	return <canvas onContextMenu={(evt) => (evtRef.current = evt)} height="4800" width="1800" ref={(elem) => elem && setTimeout(() => setup(elem), 0)} />;
 };
 
 export default memo(Canvas, ({ onLoad: prevOnLoad }, { onLoad }) => prevOnLoad === onLoad);
