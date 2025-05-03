@@ -13,9 +13,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 
 	const setup = useCallback(
 		(canvas: HTMLCanvasElement) => {
-			console.log((window as any).Module.calledRun);
-			console.log((window as any).Module.wasmExports);
-			if ((window as any).Module.calledRun) {
+			setTimeout(() => {
 				const we = new WASMEngine((window as any).Module);
 				const oe = new OSEngine(canvas, we);
 
@@ -25,19 +23,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 				onLoad(we, oe);
 
 				oe.start();
-			} else {
-				(window as any).Module.onRuntimeInitialized = () => {
-					const we = new WASMEngine((window as any).Module);
-					const oe = new OSEngine(canvas, we);
-
-					wasmEngine.current = we;
-					osEngine.current = oe;
-
-					onLoad(we, oe);
-
-					oe.start();
-				};
-			}
+			}, 100);
 		},
 		[onLoad]
 	);
