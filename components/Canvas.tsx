@@ -13,6 +13,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 
 	const setup = useCallback(
 		(canvas: HTMLCanvasElement) => {
+			console.log((window as any).Module);
 			const we = new WASMEngine((window as any).Module);
 			const oe = new OSEngine(canvas, we);
 
@@ -26,14 +27,7 @@ const Canvas: React.FC<Props> = ({ onLoad, evtRef }) => {
 		[onLoad]
 	);
 
-	return (
-		<canvas
-			onContextMenu={(evt) => (evtRef.current = evt)}
-			height="4800"
-			width="1800"
-			ref={(elem) => elem && ((window as any).Module.onRuntimeInitialized = () => setup(elem))}
-		/>
-	);
+	return <canvas onContextMenu={(evt) => (evtRef.current = evt)} height="4800" width="1800" ref={(elem) => elem && setup(elem)} />;
 };
 
 export default memo(Canvas, ({ onLoad: prevOnLoad }, { onLoad }) => prevOnLoad === onLoad);
