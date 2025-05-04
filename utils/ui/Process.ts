@@ -39,6 +39,7 @@ export class ProcessIndicator extends Entity {
 			case ProcessState.PROCESSING:
 				renderEngine.fillRect(this.position.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.yellow);
 				break;
+			case ProcessState.DEAD:
 			case ProcessState.BLOCKED:
 				renderEngine.fillRect(this.position.add(new Point(-85, 0)), 10, 50, STATUS_COLORS.red);
 				break;

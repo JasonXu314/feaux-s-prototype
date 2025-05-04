@@ -7,7 +7,8 @@ export enum ProcessState {
 	READY,
 	PROCESSING,
 	BLOCKED,
-	DONE
+	DONE,
+	DEAD
 }
 
 export enum StepAction {

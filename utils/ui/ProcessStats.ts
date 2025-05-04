@@ -27,6 +27,7 @@ export class ProcessStatsIndicator extends Entity {
 				['pid', 'PID'],
 				['name', 'Name'],
 				['arrivalTime', 'Arrival Time'],
+				['deadline', 'Deadline'],
 				['doneTime', 'Completion Time'],
 				['level', 'MLF Level'],
 				['state', 'State']

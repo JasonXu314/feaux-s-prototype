@@ -34,7 +34,7 @@ enum StepAction { NOOP, HANDLE_INTERRUPT, BEGIN_RUN, CONTINUE_RUN, HANDLE_SYSCAL
 // LST = Least Slack time
 enum SchedulingStrategy { FIFO, SJF, SRT, MLF, RT_FIFO, RT_EDF, RT_LST };
 // The states a process can be in
-enum State { ready, processing, blocked, done };
+enum State { ready, processing, blocked, done, dead };
 // The opcodes for CPU instructions
 enum Opcode { NOP, WORK, IO, EXIT, LOAD, MOVE, ALLOC, FREE, SW, CMP, JL, JLE, JE, JGE, JG, INC, ADD, SUB };
 // The available x86-64 registers (yes i know in my imiplementation they're 32-bit, not 64-bit,

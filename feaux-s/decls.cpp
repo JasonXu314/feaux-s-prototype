@@ -16,9 +16,27 @@ bool SRTComparator::operator()(PCB* a, PCB* b) {
 }
 
 bool EDFComparator::operator()(PCB* a, PCB* b) {
-	return a->deadline > b->deadline;
+	// this case needs to exist to satisfy anti-commutativity of equality operation
+	if (a->deadline == -1 && b->deadline == -1) {
+		return false;
+	} else if (a->deadline == -1) {
+		return true;
+	} else if (b->deadline == -1) {
+		return false;
+	} else {
+		return a->deadline > b->deadline;
+	}
 }
 
 bool LSTComparator::operator()(PCB* a, PCB* b) {
-	return (a->deadline - (a->reqProcessorTime - a->processorTime)) > (b->deadline - (b->reqProcessorTime - b->processorTime));
+	// same as above
+	if (a->deadline == -1 && b->deadline == -1) {
+		return false;
+	} else if (a->deadline == -1) {
+		return true;
+	} else if (b->deadline == -1) {
+		return false;
+	} else {
+		return (a->deadline - (a->reqProcessorTime - a->processorTime)) > (b->deadline - (b->reqProcessorTime - b->processorTime));
+	}
 }

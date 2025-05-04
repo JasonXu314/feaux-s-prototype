@@ -75,7 +75,7 @@ uint
 		proc->pid = ++nextPID;
 		proc->name = name;
 		proc->arrivalTime = state->time;
-		proc->deadline = state->time + d;
+		proc->deadline = d == -1 ? -1 : state->time + d;
 		proc->level = 0;
 		proc->processorTimeOnLevel = 0;
 		proc->state = ready;

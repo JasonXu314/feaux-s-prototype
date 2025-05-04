@@ -9,6 +9,7 @@ OSState* state = nullptr;
 
 void initOS(uint numCores, SchedulingStrategy strategy) {
 	state = new OSState();
+	nextPID = 0;
 
 	state->stepAction = new StepAction[numCores];
 	state->pendingSyscalls = new Syscall[numCores];

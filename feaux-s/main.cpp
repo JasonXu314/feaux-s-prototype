@@ -163,6 +163,50 @@ int main() {
 						if (state->stepAction[core] != StepAction::BEGIN_RUN) {	 // If no such process was found, then continue execution
 							state->stepAction[core] = StepAction::CONTINUE_RUN;
 						}
+					} else if (state->strategy == SchedulingStrategy::RT_EDF && state->edfReadyList.top()->deadline != -1 &&
+							   (runningProcess->deadline == -1 || state->edfReadyList.top()->deadline < runningProcess->deadline)) {
+						// Reset state
+						runningProcess->state = ready;
+						runningProcess->processorTime++;
+
+						// Save register state
+						Registers regstate = machine->cores[core]->regstate();
+						runningProcess->regstate = regstate;
+
+						// Load preempting process (modeling 0 context-switching time; alternatively, resetting core to no process would model 1-tick
+						// context-switching cost)
+						PCB* preProc = schedule(core);
+						state->edfReadyList.push(runningProcess);
+
+						runningProcess = preProc;
+						state->runningProcess[core] = preProc;
+						machine->cores[core]->load(preProc->regstate);
+
+						state->stepAction[core] = StepAction::CONTINUE_RUN;
+					} else if (state->strategy == SchedulingStrategy::RT_LST && state->lstReadyList.top()->deadline != -1 &&
+							   (runningProcess->deadline == -1 ||
+								// very verbose way of writing slack time
+								state->lstReadyList.top()->deadline -
+										(state->time + (state->lstReadyList.top()->reqProcessorTime - state->lstReadyList.top()->processorTime + 1)) <
+									runningProcess->deadline - (state->time + (runningProcess->reqProcessorTime - runningProcess->processorTime + 1)))) {
+						// Reset state
+						runningProcess->state = ready;
+						runningProcess->processorTime++;
+
+						// Save register state
+						Registers regstate = machine->cores[core]->regstate();
+						runningProcess->regstate = regstate;
+
+						// Load preempting process (modeling 0 context-switching time; alternatively, resetting core to no process would model 1-tick
+						// context-switching cost)
+						PCB* preProc = schedule(core);
+						state->lstReadyList.push(runningProcess);
+
+						runningProcess = preProc;
+						state->runningProcess[core] = preProc;
+						machine->cores[core]->load(preProc->regstate);
+
+						state->stepAction[core] = StepAction::CONTINUE_RUN;
 					} else {
 						state->stepAction[core] = StepAction::CONTINUE_RUN;	 // runnning process is still running
 					}
@@ -299,7 +343,7 @@ int main() {
 								}
 								case Syscall::SYS_EXIT:
 									// Mark processs as done and save final register state
-									runningProcess->state = done;
+									runningProcess->state = (runningProcess->deadline == -1 || state->time <= runningProcess->deadline) ? done : dead;
 									runningProcess->doneTime = state->time;
 									runningProcess->regstate = machine->cores[core]->regstate();
 

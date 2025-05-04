@@ -20,6 +20,8 @@ export function prettyState(state: ProcessState): string {
 			return 'PROCESSING';
 		case ProcessState.READY:
 			return 'READY';
+		case ProcessState.DEAD:
+			return 'DEAD';
 		default:
 			return 'whoops...';
 	}
